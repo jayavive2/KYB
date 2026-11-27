@@ -1,0 +1,64 @@
+# One palette for the app and its charts: the accent is the same blue as chart series 1, the
+# surfaces are the ones the chart colors were validated against, and status colors are reserved
+# for found/missed and pass/fail. Light and dark are both defined; the viewer picks in Settings.
+
+[browser]
+gatherUsageStats = false
+
+[client]
+toolbarMode = "minimal"
+
+[theme]
+font = "system-ui, -apple-system, Segoe UI, sans-serif"
+headingFont = "system-ui, -apple-system, Segoe UI, sans-serif"
+codeFont = "ui-monospace, SFMono-Regular, Menlo, monospace"
+baseRadius = "0.6rem"
+buttonRadius = "full"
+baseFontSize = 15
+headingFontWeights = [700, 650, 600, 600, 600, 600]
+headingFontSizes = ["2.1rem", "1.45rem", "1.15rem", "1rem", "0.95rem", "0.9rem"]
+metricValueFontSize = "1.9rem"
+metricValueFontWeight = 650
+showWidgetBorder = true
+chartCategoricalColors = ["#257de0", "#f47230", "#00b894", "#f2a600", "#ee7fac", "#008a17", "#6a4ce2", "#ec4647"]
+chartSequentialColors = ["#cce3fd", "#b6d5f8", "#9dc8f7", "#84b9f3", "#6aabf1", "#519ced", "#338ced", "#257de0", "#2370cd", "#0f4a96"]
+
+[theme.light]
+primaryColor = "#257de0"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f4f6fa"
+textColor = "#191919"
+borderColor = "#e3e7ee"
+dataframeBorderColor = "#e3e7ee"
+dataframeHeaderBackgroundColor = "#f4f6fa"
+linkColor = "#1b64be"
+blueColor = "#257de0"
+greenColor = "#0aac23"
+redColor = "#dc3c3d"
+orangeColor = "#f18a59"
+yellowColor = "#fbb315"
+grayColor = "#666666"
+
+[theme.dark]
+primaryColor = "#338ced"
+backgroundColor = "#191919"
+secondaryBackgroundColor = "#232529"
+textColor = "#efefef"
+borderColor = "#33363c"
+dataframeBorderColor = "#33363c"
+dataframeHeaderBackgroundColor = "#232529"
+linkColor = "#6aabf1"
+blueColor = "#338ced"
+greenColor = "#0aac23"
+redColor = "#dc3c3d"
+orangeColor = "#f18a59"
+yellowColor = "#fbb315"
+grayColor = "#9c9c9c"
+
+[theme.light.sidebar]
+backgroundColor = "#f4f6fa"
+secondaryBackgroundColor = "#ffffff"
+
+[theme.dark.sidebar]
+backgroundColor = "#202226"
+secondaryBackgroundColor = "#191919"

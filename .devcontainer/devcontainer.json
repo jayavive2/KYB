@@ -1,0 +1,28 @@
+{
+  "name": "KYB screener",
+  "image": "mcr.microsoft.com/devcontainers/python:1-3.12-bookworm",
+  "hostRequirements": { "cpus": 2 },
+  "secrets": {
+    "TAVILY_API_KEY": {
+      "description": "Tavily API key, used for every search.",
+      "documentationUrl": "https://app.tavily.com"
+    },
+    "NEBIUS_API_KEY": {
+      "description": "Nebius Token Factory API key, used for the planner, reader and judge models.",
+      "documentationUrl": "https://tokenfactory.nebius.com"
+    }
+  },
+  "postCreateCommand": "pipx install uv && uv sync",
+  "postAttachCommand": {
+    "app": "uv run streamlit run app.py --server.headless true --server.port 8501 --server.enableCORS false --server.enableXsrfProtection false"
+  },
+  "forwardPorts": [8501, 6006],
+  "portsAttributes": {
+    "8501": { "label": "KYB app", "onAutoForward": "openPreview" },
+    "6006": { "label": "Phoenix traces (optional)", "onAutoForward": "notify" }
+  },
+  "customizations": {
+    "codespaces": { "openFiles": ["README.md"] },
+    "vscode": { "extensions": ["ms-python.python"] }
+  }
+}

@@ -1,0 +1,49 @@
+# Rubric the judge model uses to grade each report, 1-5 per criterion.
+#
+# The judge sees the screening question, the report (each finding with excerpts of its cited
+# sources), and an overview of all the evidence the reader was given. That last part is what
+# lets it grade scope: whether the reader used what was there.
+#
+# weight: share of the overall quality score (weights are renormalized over the criteria that
+#         apply to a report). applies_to_empty: whether to grade a report with no findings.
+question: >-
+  What material adverse events involving the target company happened inside the screening
+  window, and how serious are they?
+scale:
+  5: no problems
+  4: one minor problem
+  3: some findings have problems
+  2: most findings have problems
+  1: unusable
+criteria:
+  - key: citation
+    weight: 0.25
+    applies_to_empty: false
+    question: >-
+      Is every finding backed by its cited excerpts, with no actor, amount, date or outcome
+      that the excerpts do not state?
+  - key: scope
+    weight: 0.25
+    applies_to_empty: true
+    question: >-
+      How fully does the report answer the screening question, given the evidence it had? Does it
+      capture every significant adverse event present in the evidence, across all risk categories?
+      A report with no findings scores 5 only if the evidence holds nothing material.
+  - key: relevance
+    weight: 0.20
+    applies_to_empty: false
+    question: >-
+      Is what it reports relevant: adverse events about the target company itself (not a company
+      with a similar name), inside the window, in the right category, without noise or duplicates?
+  - key: specificity
+    weight: 0.15
+    applies_to_empty: false
+    question: >-
+      Are findings specific: who acted, what happened, amounts and dates wherever the sources
+      give them?
+  - key: calibration
+    weight: 0.15
+    applies_to_empty: false
+    question: >-
+      Do severity (high, medium, low) and status (alleged, confirmed, resolved) match what the
+      sources say?

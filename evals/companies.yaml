@@ -1,0 +1,176 @@
+# Eval cases for `kyb eval record` / `kyb eval run`.
+#
+# Every expected event below has a public reference. CHECK EACH ONE YOURSELF before
+# publishing results: the eval is only as trustworthy as this file.
+#
+# Events must fall inside the lookback window counted back from the recording date.
+# `as_of` is left unset so recordings use the day you record; set it to pin the window.
+lookback_years: 5
+
+cases:
+  - id: td-bank
+    company:
+      name: TD Bank
+      aliases: ["TD Bank, N.A.", "TD Bank US Holding Company"]
+      country: United States
+      website: td.com
+      industry: Retail and commercial banking
+      notes: US subsidiary of The Toronto-Dominion Bank (Canada).
+    expected_events:
+      - id: aml-plea-2024
+        category: financial_crime
+        date: "2024-10"
+        description: >-
+          TD Bank N.A. and its US holding company pleaded guilty to Bank Secrecy Act
+          failures and conspiracy to commit money laundering; about $1.8B to DOJ and about
+          $3B in total with the FinCEN, OCC and Federal Reserve resolutions.
+        reference: https://www.justice.gov/opa/pr/td-bank-pleads-guilty-bank-secrecy-act-and-money-laundering-conspiracy-violations-18b
+
+  - id: binance
+    company:
+      name: Binance
+      aliases: ["Binance Holdings Ltd."]
+      country: Cayman Islands
+      website: binance.com
+      industry: Cryptocurrency exchange
+    expected_events:
+      - id: doj-plea-2023
+        category: financial_crime
+        date: "2023-11"
+        description: >-
+          Binance pleaded guilty to federal charges (anti-money-laundering, unlicensed money
+          transmitting, sanctions) and agreed to pay over $4B, coordinated with FinCEN,
+          OFAC and the CFTC.
+        reference: https://www.justice.gov/opa/gallery/binance-and-ceo-plead-guilty-federal-charges-4b-resolution
+      - id: ofac-2023
+        category: sanctions
+        date: "2023-11"
+        description: >-
+          OFAC settlement of about $968.6M for roughly 1.67 million apparent violations of
+          multiple sanctions programs between 2017 and 2022.
+        reference: https://ofac.treasury.gov/recent-actions/20231121
+      - id: ceo-plea-2023
+        category: leadership
+        date: "2023-11"
+        description: Founder and CEO Changpeng Zhao pleaded guilty to a Bank Secrecy Act violation.
+        reference: https://www.justice.gov/opa/gallery/binance-and-ceo-plead-guilty-federal-charges-4b-resolution
+
+  - id: change-healthcare
+    company:
+      name: Change Healthcare
+      country: United States
+      website: changehealthcare.com
+      industry: Healthcare payments and claims processing
+      notes: Owned by UnitedHealth Group (Optum).
+    expected_events:
+      - id: ransomware-2024
+        category: data_breach
+        date: "2024-02"
+        description: >-
+          Ransomware attack (claimed by ALPHV/BlackCat) disrupted claims processing across
+          US healthcare; health and personal data of roughly 190 million people was stolen.
+        reference: https://techcrunch.com/2025/01/27/how-the-ransomware-attack-at-Change-Healthcare-went-down-a-timeline/
+
+  - id: boeing
+    company:
+      name: Boeing
+      aliases: ["The Boeing Company"]
+      country: United States
+      website: boeing.com
+      industry: Aerospace manufacturing
+    expected_events:
+      - id: ceo-exit-2024
+        category: leadership
+        date: "2024-03"
+        description: >-
+          CEO Dave Calhoun announced he would step down at the end of 2024, and the board
+          chair left, after the January 2024 Alaska Airlines 737 MAX 9 door-plug blowout.
+        reference: https://npr.org/2024/03/25/1240652652/boeing-ceo-dave-calhoun-steps-down-737-max-investigations
+      - id: npa-2025
+        category: financial_crime
+        date: "2025-05"
+        description: >-
+          DOJ agreed a non-prosecution agreement letting Boeing avoid trial on the 737 MAX
+          fraud charge, after finding Boeing had breached its 2021 deferred prosecution agreement.
+        reference: https://www.pbs.org/newshour/nation/doj-reaches-deal-to-allow-boeing-to-avoid-prosecution-over-737-max-crashes
+
+  - id: wells-fargo
+    company:
+      name: Wells Fargo
+      aliases: ["Wells Fargo Bank, N.A.", "Wells Fargo & Company"]
+      country: United States
+      website: wellsfargo.com
+      industry: Banking
+    notes: >-
+      The Federal Reserve lifted the 2018 asset cap in June 2025. It is a resolution, not
+      new adverse news, so it is not an expected event; models may still report it as resolved.
+    expected_events:
+      - id: cfpb-2022
+        category: regulatory
+        date: "2022-12"
+        description: >-
+          CFPB order requiring about $3.7B: a $1.7B civil penalty plus over $2B in consumer
+          redress for mishandling auto loans, mortgages and deposit accounts.
+        reference: https://www.consumerfinance.gov/enforcement/actions/wells-fargo-bank-na-2022/
+
+  - id: northvolt
+    company:
+      name: Northvolt
+      aliases: ["Northvolt AB"]
+      country: Sweden
+      website: northvolt.com
+      industry: EV battery manufacturing
+    expected_events:
+      - id: layoffs-2024
+        category: financial_distress
+        date: "2024-09"
+        description: Cut about 1,600 jobs, roughly 20% of its workforce.
+        reference: https://techcrunch.com/2024/11/21/battery-unicorn-northvolt-files-for-bankruptcy-upending-europes-industrial-plan
+      - id: chapter11-2024
+        category: financial_distress
+        date: "2024-11"
+        description: Filed for US Chapter 11 bankruptcy protection with about $5.8B of debt.
+        reference: https://sifted.eu/articles/northvolt-bankruptcy-us-news
+      - id: ceo-resign-2024
+        category: leadership
+        date: "2024-11"
+        description: Co-founder and CEO Peter Carlsson resigned after the Chapter 11 filing.
+        reference: https://techcrunch.com/2024/11/22/battery-unicorn-northvolt-files-for-bankruptcy-co-founder-and-ceo-resigns/
+      - id: sweden-bankruptcy-2025
+        category: financial_distress
+        date: "2025-03"
+        description: Filed for bankruptcy in Sweden after failing to secure rescue financing.
+        reference: https://northvolt.com/articles/northvolt-files-for-bankruptcy-in-sweden/
+
+  # Namesake pressure: Fidelity Investments and Fidelity National Information Services
+  # (FIS) are different companies with their own incidents.
+  - id: fidelity-national-financial
+    company:
+      name: Fidelity National Financial
+      aliases: ["FNF"]
+      country: United States
+      website: fnf.com
+      industry: Title insurance and real estate services
+      notes: Not Fidelity Investments (FMR) and not Fidelity National Information Services (FIS).
+    expected_events:
+      - id: cyberattack-2023
+        category: data_breach
+        date: "2023-11"
+        description: >-
+          Cyberattack (claimed by ALPHV/BlackCat) took systems offline for about a week;
+          data of about 1.3 million consumers was taken.
+        reference: https://www.sec.gov/Archives/edgar/data/1331875/000133187524000019/fnf-20231231.htm
+
+  # Namesake trap: a short brand name shared with many companies. No expected events;
+  # this case measures whether models pin other "Mercury" companies' news on the target.
+  - id: mercury
+    company:
+      name: Mercury
+      aliases: ["Mercury Technologies, Inc."]
+      country: United States
+      website: mercury.com
+      industry: Business banking fintech (accounts provided through partner banks)
+      notes: >-
+        San Francisco fintech. Not Mercury Insurance, Mercury Systems, Mercury Marine,
+        or any other company named Mercury.
+    expected_events: []

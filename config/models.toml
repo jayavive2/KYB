@@ -1,0 +1,60 @@
+# Models for the CLI and the Streamlit app, and their prices.
+#
+# Prices are USD per 1M tokens for the base flavor on Nebius Token Factory, copied from
+# https://tokenfactory.nebius.com/api/public/models_info on 2026-11-26.
+# The catalog changes: run `uv run kyb models` and check it before publishing results.
+# A model with no price here still runs; its cost shows as "n/a".
+
+[defaults]
+# What a screen uses unless you choose otherwise: a reasoning model plans, a cheaper model reads.
+# "fixed" instead of a model ID = the hand-written plan in src/kyb/plan.py.
+planner = "moonshotai/Kimi-K3.1-Pro"
+reader = "openai/gpt-oss-120b"
+
+[eval]
+# Kept out of the reader list so it never grades its own output.
+judge = "deepseek-ai/DeepSeek-V4-Pro-0813"
+# Reasoning ("thinking") models to try as planners.
+planners = ["moonshotai/Kimi-K3.1-Pro", "zai-org/GLM-5.3"]
+# The planner held fixed in a reader sweep (`kyb eval readers`, the app's Dashboard).
+sweep_planner = "moonshotai/Kimi-K3.1-Pro"
+# Five readers across price tiers, most to least expensive.
+readers = [
+  "zai-org/GLM-5.3",
+  "MiniMaxAI/MiniMax-M3",
+  "nvidia/nemotron-3-super-120b-a12b",
+  "openai/gpt-oss-120b",
+  "Qwen/Qwen3-30B-A3B-Instruct-2507",
+]
+
+[prices."moonshotai/Kimi-K3.1-Pro"]
+input = 2.00
+output = 10.00
+
+[prices."zai-org/GLM-5.3"]
+input = 1.40
+output = 4.40
+
+[prices."MiniMaxAI/MiniMax-M3"]
+input = 0.30
+output = 1.20
+
+[prices."zai-org/GLM-5.3-Flash"]
+input = 0.15
+output = 0.50
+
+[prices."openai/gpt-oss-120b"]
+input = 0.15
+output = 0.60
+
+[prices."nvidia/nemotron-3-super-120b-a12b"]
+input = 0.30
+output = 0.90
+
+[prices."Qwen/Qwen3-30B-A3B-Instruct-2507"]
+input = 0.10
+output = 0.30
+
+[prices."deepseek-ai/DeepSeek-V4-Pro-0813"]
+input = 1.32
+output = 3.96
