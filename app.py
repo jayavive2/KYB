@@ -43,11 +43,9 @@ st.set_page_config(page_title="KYB screener", layout="wide")
 cfg = ev.load_config(CONFIG)
 prices = cfg.get("prices", {})
 defaults = cfg.get("defaults", {})
-planner_options = list(dict.fromkeys([FIXED] + defaults.get("planners", []) + [defaults.get("planner", FIXED)]))
+planner_id = defaults.get("planner", FIXED)   # fixed: change it in config/models.toml
 champion_id = C.current(cfg) or cfg["eval"]["readers"][0]
 reader_options = list(dict.fromkeys(cfg["eval"]["readers"] + [champion_id]))
-if "new_champion" in st.session_state:          # set by a promotion on the last run
-    st.session_state["screen_reader"] = st.session_state.pop("new_champion")
 
 
 def stamp() -> str:
@@ -319,7 +317,6 @@ def show_dashboard(run: Path, where: str) -> None:
                 C.promote(leader["reader"], replaced=champion_now, run=str(run),
                           weights={"quality": w_q, "cost": w_c, "latency": w_l},
                           scores={leader["reader"]: snapshot(leader["reader"]), champion_now: snapshot(champion_now)})
-                st.session_state["new_champion"] = leader["reader"]
                 st.rerun()
 
     tiles = st.columns(4)
@@ -422,7 +419,7 @@ with st.sidebar:
         st.badge("TAVILY_API_KEY", icon=":material/check_circle:", color="green")
     else:
         st.badge("TAVILY_API_KEY missing", icon=":material/error:", color="red")
-    configured = [m for m in [defaults.get("planner"), defaults.get("reader"), *defaults.get("planners", []),
+    configured = [m for m in [planner_id, champion_id,
                               cfg["eval"]["judge"], *cfg["eval"]["readers"]] if m and m != FIXED]
     for provider in dict.fromkeys(m.split("/", 1)[0] for m in configured):
         gaps = missing_keys(models=[m for m in configured if m.startswith(provider + "/")])
@@ -454,15 +451,14 @@ with tab_screen:
         industry = c2.text_input("Industry")
         aliases = c1.text_input("Aliases (comma-separated)")
         notes = c2.text_input("Notes that tell it apart from similarly named companies")
-        s_planner = c1.selectbox("Planner model", planner_options, key="screen_planner",
-                                 index=planner_options.index(defaults.get("planner", FIXED)))
-        s_reader = c2.selectbox("Champion reader", reader_options, key="screen_reader",
-                                index=reader_options.index(champion_id),
-                                format_func=lambda m: f"{m}  (champion)" if m == champion_id else m)
         lookback = c1.number_input("Lookback (years)", 1, 20, 5)
         s_check = c2.checkbox("Check every finding against its sources (judge model in the sidebar)",
                               True, key="screen_check")
+        st.markdown(f"Planner model `{planner_id}` · Champion reader `{champion_id}`")
+        st.caption("Both are fixed for every screen. The champion changes only when you promote a reader from "
+                   "the Reader eval tab; the planner is set in config/models.toml.")
         submitted = st.form_submit_button("Screen", type="primary", key="screen_submit")
+    s_planner, s_reader = planner_id, champion_id
     screen_models = [s_planner, s_reader] + ([judge_id] if s_check else [])
     screen_blocked = missing_keys("TAVILY_API_KEY", models=screen_models) if submitted else []
     if screen_blocked:

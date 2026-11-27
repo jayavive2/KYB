@@ -108,12 +108,20 @@ def test_cli_end_to_end(tmp_path, monkeypatch):
     monkeypatch.setattr(factory, "make_search_backend", FakeTavily)
     (tmp_path / "config").mkdir()
     (tmp_path / "config" / "models.toml").write_text(
-        '[defaults]\nplanner = "fixed"\nreader = "m/a"\nplanners = ["fake/planner"]\n'
+        '[defaults]\nplanner = "fake/planner"\nreader = "m/a"\n'
         '[eval]\njudge = "judge/x"\nreaders = ["m/a", "m/b"]\n')
     (tmp_path / "config" / "rubric.yaml").write_text(RUBRIC.read_text())
     runner = CliRunner()
 
-    r = runner.invoke(cli.app, ["screen", "Acme Corp", "--planner", "fake/planner", "--as-of", "2026-01-15"])
+    r = runner.invoke(cli.app, ["screen", "Acme Corp", "--as-of", "2026-01-15"])   # configured planner, champion
+    assert r.exit_code == 0, r.output
+    assert "planner fake/planner · reader m/a" in r.output
+    assert runner.invoke(cli.app, ["screen", "Acme Corp", "--reader", "m/b"]).exit_code != 0  # no per-screen pick
+    for old in Path("runs").glob("*"):
+        import shutil
+
+        shutil.rmtree(old)
+    r = runner.invoke(cli.app, ["screen", "Acme Corp", "--as-of", "2026-01-15"])
     assert r.exit_code == 0, r.output
     assert "Plan fixes" in r.output and "source check:" in r.output
     trace = next(Path("runs").glob("*/trace.jsonl"))
@@ -196,9 +204,8 @@ def test_cut_off_answers_and_judge_failures_are_explained(tmp_path):
     (problem,) = by["m/ramble"].problems
     assert "7 of 7 categories not assessed" in problem and "cut off at the" in problem
     # the retry after a cut-off asks again briefly instead of resending the cut-off text
-    retry = rambler.calls[1]
-    assert retry[-1]["role"] == "user" and "ran out of room" in retry[-1]["content"]
-    assert not any(m["role"] == "assistant" for m in retry)
+    retries = [c for c in rambler.calls if "ran out of room" in c[-1]["content"]]   # categories run in parallel
+    assert len(retries) == 7 and not any(m["role"] == "assistant" for c in retries for m in c)
     assert any("judge rubric:" in p and "cut off" in p for p in by["m/a"].problems)
     summary = (out / "summary.md").read_text()
     assert "## Problems" in summary and "**m/ramble**" in summary

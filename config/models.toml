@@ -14,13 +14,12 @@
 # its cost shows as "n/a".
 
 [defaults]
-# What a screen uses unless you choose otherwise: a reasoning model plans, a cheaper model reads.
-# "fixed" instead of a model ID = the hand-written plan in src/kyb/plan.py.
+# Every screen uses this planner and the champion reader; neither is picked per screen.
+# The planner: a reasoning model ("fixed" = the hand-written plan in src/kyb/plan.py).
 planner = "nebius/moonshotai/Kimi-K3.1-Pro"
-# The first champion reader; promotions from a reader eval replace it (config/champion.json).
+# The first champion reader. After that, only a promotion from a reader eval changes the
+# champion, and config/champion.json records it.
 reader = "nebius/openai/gpt-oss-120b"
-# Other planners offered in the app's Screen tab.
-planners = ["nebius/moonshotai/Kimi-K3.1-Pro", "nebius/zai-org/GLM-5.3"]
 
 [eval]
 # Checks every finding on each screen, and judges the reader eval. Kept out of the reader list so

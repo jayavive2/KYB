@@ -20,7 +20,6 @@ def _setup(tmp_path, monkeypatch):
     monkeypatch.setattr(factory, "make_search_backend", FakeTavily)
     (tmp_path / "config").mkdir()
     (tmp_path / "config" / "models.toml").write_text(
-        '[defaults]\nplanners = ["fake/planner"]\n'
         '[eval]\njudge = "judge/x"\nreaders = ["m/a", "m/bad"]\n'
         '[prices."m/a"]\ninput = 1.0\noutput = 2.0\n')
     (tmp_path / "config" / "rubric.yaml").write_text(RUBRIC.read_text())
@@ -118,10 +117,12 @@ def test_promote_the_leader_to_champion(tmp_path, monkeypatch):
 
     _setup(tmp_path, monkeypatch)
     (tmp_path / "config" / "models.toml").write_text(       # the champion starts as the weaker reader
-        '[defaults]\nreader = "m/bad"\n[eval]\njudge = "judge/x"\nreaders = ["m/a"]\n')
+        '[defaults]\nplanner = "fixed"\nreader = "m/bad"\n[eval]\njudge = "judge/x"\nreaders = ["m/a"]\n')
     at = _app()
-    assert at.selectbox(key="screen_reader").value == "m/bad"
+    assert not at.selectbox and "Champion reader `m/bad`" in _text(at)    # fixed, nothing to pick
     _screen(at, "Acme Corp")
+    first = json.loads(next(Path("runs").glob("*-Acme_Corp/findings.json")).read_text())
+    assert first["model"] == "m/bad" and first["planner"] == "fixed"
     at = _app()
     assert at.multiselect(key="readers").value == ["m/a", "m/bad"]     # the champion is always compared
     at.button(key="run").click().run()
@@ -130,9 +131,12 @@ def test_promote_the_leader_to_champion(tmp_path, monkeypatch):
     assert "Leader with your weights" in _text(at)
     at.button(key=f"promote_dash_{run_dir.name}").click().run()
     assert not at.exception, at.exception
-    assert C.current({}) == "m/a" and at.selectbox(key="screen_reader").value == "m/a"
+    assert C.current({}) == "m/a" and "Champion reader `m/a`" in _text(at)
     (entry,) = C.history()
     assert entry["replaced"] == "m/bad" and entry["run"] == str(run_dir) and entry["weights"]["quality"] == 0.6
     assert entry["scores"]["m/a"]["quality"] > entry["scores"]["m/bad"]["quality"]
     assert "leads with your weights" in _text(at)                    # no button once the leader is champion
     assert not any(b.key == f"promote_dash_{run_dir.name}" for b in at.button)
+    _screen(at, "Beta Inc")                                          # new screens use the new champion
+    second = json.loads(next(Path("runs").glob("*-Beta_Inc/findings.json")).read_text())
+    assert second["model"] == "m/a"

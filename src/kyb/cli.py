@@ -49,13 +49,17 @@ def _config() -> dict:
     return ev.load_config(CONFIG) if CONFIG.exists() else {}
 
 
-def _default(role: str, fallback: str) -> str:
-    """KYB_PLANNER / KYB_READER, else config. The reader default is the champion (config/champion.json)."""
-    if role == "reader":
-        from .champion import current
+def _planner() -> str:
+    """Fixed: [defaults] planner in config/models.toml."""
+    return _config().get("defaults", {}).get("planner", FIXED)
 
-        return os.getenv("KYB_READER") or current(_config()) or fallback
-    return os.getenv(f"KYB_{role.upper()}") or _config().get("defaults", {}).get(role, fallback)
+
+def _champion() -> str:
+    """Fixed until a promotion (config/champion.json); before the first, [defaults] reader."""
+    from .champion import current
+
+    cfg = _config()
+    return current(cfg) or cfg["eval"]["readers"][0]
 
 
 def _require(name: str, hint: str) -> None:
@@ -151,8 +155,6 @@ def screen(
     industry: Annotated[Optional[str], typer.Option()] = None,
     alias: Annotated[Optional[list[str]], typer.Option(help="Other names; repeatable")] = None,
     notes: Annotated[Optional[str], typer.Option(help="Anything that tells it apart from namesakes")] = None,
-    planner: Annotated[Optional[str], typer.Option(help="'fixed' or a model ID")] = None,
-    reader: Annotated[Optional[str], typer.Option(help="Reader model (default: the champion)")] = None,
     lookback_years: Annotated[int, typer.Option(help="Only events this recent")] = 5,
     as_of: Annotated[Optional[str], typer.Option(help="Screen date YYYY-MM-DD (default today)")] = None,
     search_only: Annotated[bool, typer.Option(help="Plan and search, no reader")] = False,
@@ -160,9 +162,9 @@ def screen(
     check: Annotated[bool, typer.Option(help="Check every finding against its cited sources")] = True,
     judge: Annotated[Optional[str], typer.Option(help="Model for the source check")] = None,
 ) -> None:
-    """Screen a company live and write a cited report plus a replayable trace."""
-    planner = planner or _default("planner", FIXED)
-    reader = reader or _default("reader", "nebius/openai/gpt-oss-120b")
+    """Screen a company live with the configured planner and the champion reader; write a cited report
+    plus a replayable trace."""
+    planner, reader = _planner(), _champion()   # fixed; only a promotion changes the champion
     check = check and not search_only
     judge_id = judge or _config().get("eval", {}).get("judge", reader)
     _require_tavily()
@@ -194,7 +196,7 @@ def replay(
     out: Annotated[Optional[Path], typer.Option(help="Output folder")] = None,
 ) -> None:
     """Re-run a recorded screen with another reader: same plan, same evidence, no Tavily calls."""
-    reader = reader or _default("reader", "nebius/openai/gpt-oss-120b")
+    reader = reader or _champion()
     _require_keys(reader)
     recording = load_recording(trace)
     if recording.plan is None and recording.plan_version != plan_version():

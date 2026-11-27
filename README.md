@@ -155,8 +155,8 @@ hitters (see below).
 
 ## The champion reader
 
-Every screen uses the **champion** reader unless you pick another. It starts as `[defaults] reader`
-in `config/models.toml` and changes only by promotion: when a reader eval's leader (by the
+Every screen uses the configured planner and the **champion** reader; neither is picked per screen.
+The champion starts as `[defaults] reader` in `config/models.toml` and changes only by promotion: when a reader eval's leader (by the
 dashboard's weighted score) isn't the champion, the dashboard offers **Promote to champion**.
 Each promotion is recorded in `config/champion.json` with the run, the weights and the scores of
 both models, so the history of the production reader is reviewable. Commit that file to keep it.
@@ -241,7 +241,7 @@ src/kyb/report.py      markdown / JSON report
 src/kyb/tracing.py     OpenTelemetry setup (file + optional OTLP)
 src/kyb/factory.py     builds live models and the search backend
 src/kyb/cli.py         `kyb` command
-config/models.toml     default planner, first champion, planner choices, readers, judge, prices
+config/models.toml     the planner, the first champion, readers to compare, judge, prices
 config/champion.json   current champion reader and every promotion (written by the app)
 config/rubric.yaml     rubric criteria and weights
 tests/                 offline tests: fake Tavily, fake models, LiteLLM against a mock endpoint, AppTest
