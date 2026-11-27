@@ -29,36 +29,25 @@ AML team, for example, works where regulators dictate the method as well as the 
 - **OpenTelemetry tracing with OpenInference conventions**, viewable in Phoenix, Langfuse or any
   OTLP backend. The plan and every full Tavily response are on the spans, so each trace is also a
   recording that can be replayed.
-- **Eval 1, search against known events.** For companies with referenced adverse events, the judge
-  checks whether each event appears in each planner's recorded search results. Found or missed,
-  by which sources and queries, coverage by category. No reader runs, so this isolates Tavily and the planner.
-- **Eval 2, readers on fixed search results.** Any screen, or set of screens, is replayed through
+- **A reader eval on fixed search results.** Any screen, or set of screens, is replayed through
   several readers. A judge grades each report on a weighted rubric (citation, scope, relevance,
   specificity, calibration) against the evidence the reader had, so no answer key is needed. A
   dashboard shows how the readers trade quality against cost and latency.
-- **Trace analysis** for both: calls, errors, JSON repairs and latency per call for every model,
+- **Trace analysis** for screens and evals: calls, errors, JSON repairs and latency per call for every model,
   Tavily latency and credits, and a timeline of where each screen's time went.
 - **A Streamlit app** that puts the default screen first and the evals one click away.
 
 ## Why this approach
 
-Search and reading fail for different reasons, so the harness measures them separately. Eval 1
-checks the planner and Tavily against what actually happened, but it needs an answer key and only
-covers the companies in it. Eval 2 needs no answer key and works on any screen, but it can only
-judge a report against the evidence it was given. Together they say which half of the pipeline
-to fix. Recording once and replaying keeps every comparison exact and free of extra search cost.
+Recording a screen once and replaying it keeps every reader comparison exact and free of extra
+search cost. The eval needs no answer key, so it works on any screen a team runs, but it can only
+judge a report against the evidence it was given.
 
 ## Results
 
 _From `results/<run>/summary.md`:_
 
-**Eval 1: search** (_N_ companies, _M_ known events)
-
-| Planner | Coverage | Searches / company | Results / search | Credits | Planner p50 s |
-|---|---|---|---|---|---|
-| fixed | … | … | … | … | … |
-
-**Eval 2: readers** (planner fixed: _planner_)
+**Reader eval** (planner fixed: _planner_)
 
 | Reader | Quality (1-5) | Citation | Scope | Relevance | $ / company | Sec / company | JSON repairs |
 |---|---|---|---|---|---|---|---|

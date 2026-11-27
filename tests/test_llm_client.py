@@ -20,6 +20,7 @@ class _Handler(BaseHTTPRequestHandler):
     reject_temperature = False
     fail_category: str | None = None
     out_of_credit = False
+    max_tokens_cap: int | None = None
     requests: list[dict] = []
 
     def log_message(self, *args):
@@ -28,6 +29,9 @@ class _Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         type(self).requests.append(body)
+        if self.max_tokens_cap and body.get("max_tokens", 0) > self.max_tokens_cap:
+            self._send(400, {"error": {"message": f"max_tokens must be at most {self.max_tokens_cap}"}})
+            return
         if self.out_of_credit:  # what Nebius returns when the balance runs out
             self._send(402, {"detail": "Payment Required: You have exhausted your budget. "
                                        "Please add funds to continue using the API."})
@@ -69,6 +73,7 @@ def server(monkeypatch):
     _Handler.reject_json_mode = _Handler.reject_temperature = False
     _Handler.fail_category = None
     _Handler.out_of_credit = False
+    _Handler.max_tokens_cap = None
     srv = HTTPServer(("127.0.0.1", 0), _Handler)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     yield f"http://127.0.0.1:{srv.server_port}/v1/"
@@ -172,3 +177,11 @@ def test_tavily_key_errors_are_one_line():
     assert is_fatal(InvalidAPIKeyError("Unauthorized"))
     assert "TAVILY_API_KEY" in describe_error(InvalidAPIKeyError("Unauthorized: missing or invalid API key."))
     assert "out of credits" in describe_error(UsageLimitExceededError("limit"))
+
+
+def test_a_max_tokens_the_model_rejects_is_halved(server):
+    _Handler.max_tokens_cap = 10000
+    model = LiteLLMModel("openai/mock-model", api_base=server, api_key="test", max_tokens=32768)
+    reply = model.chat([{"role": "system", "content": "s"}, {"role": "user", "content": "[S1] x"}])
+    assert model.max_tokens == 8192 and '"findings"' in reply.text and reply.finish_reason == "stop"
+    assert [r["max_tokens"] for r in _Handler.requests] == [32768, 16384, 8192]

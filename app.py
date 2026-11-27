@@ -4,8 +4,7 @@
 
 Screen       screen one company with the default planner and reader; see its trace; optionally
              compare other readers on the same search results (reader eval on one screen).
-Search eval  eval 1: did search find the known events in evals/companies.yaml? Per planner.
-Reader eval  eval 2: search held constant, readers swapped, rubric judge; dashboard and trace analysis.
+Reader eval  past screens' search held constant, readers swapped, judged; dashboard and trace analysis.
 Results      per-run detail: summaries, two reports side by side, every judge verdict.
 """
 
@@ -20,6 +19,7 @@ import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
 
+from kyb import champion as C
 from kyb import dashboard as dash
 from kyb import evaluate as ev
 from kyb import factory
@@ -36,8 +36,6 @@ load_dotenv()
 
 CONFIG = Path("config/models.toml")
 RUBRIC = Path("config/rubric.yaml")
-DATASET = Path("evals/companies.yaml")
-RECORDINGS = Path("recordings")
 RESULTS = Path("results")
 RUNS = Path("runs")
 
@@ -45,8 +43,11 @@ st.set_page_config(page_title="KYB screener", layout="wide")
 cfg = ev.load_config(CONFIG)
 prices = cfg.get("prices", {})
 defaults = cfg.get("defaults", {})
-planner_options = list(dict.fromkeys([FIXED] + cfg["eval"]["planners"] + [defaults.get("planner", FIXED)]))
-reader_options = list(dict.fromkeys(cfg["eval"]["readers"] + [defaults.get("reader", cfg["eval"]["readers"][0])]))
+planner_options = list(dict.fromkeys([FIXED] + defaults.get("planners", []) + [defaults.get("planner", FIXED)]))
+champion_id = C.current(cfg) or cfg["eval"]["readers"][0]
+reader_options = list(dict.fromkeys(cfg["eval"]["readers"] + [champion_id]))
+if "new_champion" in st.session_state:          # set by a promotion on the last run
+    st.session_state["screen_reader"] = st.session_state.pop("new_champion")
 
 
 def stamp() -> str:
@@ -134,11 +135,6 @@ def fmt_stats(stats: pd.DataFrame) -> pd.DataFrame:
         {"p50 s": 2, "p95 s": 2, "prompt tokens / call": 0, "output tokens / call": 0, "output tokens / s": 1})
 
 
-def runs_of(kind: str) -> list[Path]:
-    return [r for r in sorted(RESULTS.glob("*"), reverse=True) if (r / "experiment.json").exists()
-            and json.loads((r / "experiment.json").read_text())["kind"] == kind]
-
-
 def reader_runs() -> list[Path]:
     return [r for r in sorted(RESULTS.glob("*"), reverse=True) if (r / "metrics.json").exists()
             and json.loads((r / "experiment.json").read_text())["kind"] == "readers"]
@@ -190,8 +186,8 @@ def show_results(run_dir: Path, where: str) -> None:
         col.markdown(demote(report.read_text()) if report.exists() else "_This arm failed for this company._")
 
     st.subheader("Judge verdicts")
-    st.caption("Label a sample in judgments.csv (human_* columns), then run `kyb eval agreement`.")
-    for name in ("judgments", "recall", "coverage", "rubric", "pairwise"):
+    st.caption("Label a sample in judgments.csv (human_* columns), then run `kyb agreement`.")
+    for name in ("judgments", "rubric", "pairwise"):
         df = read_csv(run_dir / f"{name}.csv")
         if df.empty:
             continue
@@ -260,54 +256,6 @@ def show_screen(run_dir: Path) -> None:
     st.caption(f"Trace (replayable): {run_dir / 'trace.jsonl'}")
 
 
-def show_search(run_dir: Path, where: str) -> None:
-    """Eval 1 results: which known events search found, per planner."""
-    k = f"{where}_{run_dir.name}"
-    exp = json.loads((run_dir / "experiment.json").read_text())
-    metrics = json.loads((run_dir / "search_metrics.json").read_text())
-    rows = read_csv(run_dir / "search_eval.csv")
-    p = dash.PALETTES[theme_mode()]
-    st.caption(f"{len(exp['cases'])} companies, {metrics[0]['events']} known events · judge `{exp['judge']}`. "
-               "An event counts as found if any recorded search result describes it. No reader is involved.")
-    if exp.get("judge_failures"):
-        st.warning(f"{len(exp['judge_failures'])} judge calls failed; affected events count as missed.")
-    tiles = st.columns(min(len(metrics), 4))
-    for tile, m in zip(tiles, metrics, strict=False):
-        stat_card(tile, f"Coverage · {dash.short(m['planner'])}", f"{(m['coverage'] or 0):.0%}",
-                  f"{m['found']} of {m['events']} events · {m['searches_per_company']:.1f} searches per company")
-
-    rows["event"] = rows["company"] + " · " + rows["event_id"]
-    found = rows.pivot_table(index="event", columns="planner", values="found", aggfunc="max")
-    st.subheader("Found or missed, event by event")
-    labels = found.map(lambda v: "✓ found" if v else "✗ missed")
-    st.dataframe(labels.style.map(lambda v: "color: #0a8a1e; font-weight: 600" if v.startswith("✓")
-                                  else "color: #dc3c3d; font-weight: 600"), key=f"found_{k}")
-
-    cats = sorted({c for m in metrics for c in m["by_category"]})
-    by_cat = pd.DataFrame({dash.short(m["planner"]): [
-        m["by_category"][c]["found"] / m["by_category"][c]["events"] if c in m["by_category"] else None
-        for c in cats] for m in metrics}, index=cats).T
-    left, right = st.columns(2)
-    left.plotly_chart(dash.heatmap(by_cat, "Coverage by category", p, "coverage", zmin=0, zmax=1, fmt=".0%"),
-                      theme=None, key=f"cats_{k}")
-    table = pd.DataFrame([{
-        "planner": m["planner"], "searches / company": m["searches_per_company"],
-        "results / search": m["results_per_search"], "empty searches": m["empty_searches"],
-        "search p50 s": m["search_p50_s"], "search p95 s": m["search_p95_s"], "credits": m["tavily_credits"],
-        "planner calls": m["planner_calls"], "planner p50 s": m["planner_p50_s"],
-        "planner output tokens": m["planner_output_tokens"]} for m in metrics]).round(2)
-    right.markdown("**From the recordings' traces**")
-    right.dataframe(table, hide_index=True, key=f"stats_{k}")
-
-    with st.expander("Evidence for each event: matching sources and the queries that found them"):
-        st.dataframe(rows[["planner", "company", "event_id", "found", "source_titles", "source_urls",
-                           "found_by_queries", "found_in_own_category", "description"]], hide_index=True)
-    missed = rows[~rows["found"].astype(bool)]
-    if not missed.empty:
-        st.markdown("**Missed:** " + "; ".join(f"{dash.short(r.planner)} · {r.event}" for r in missed.itertuples()))
-    st.caption(f"Results folder: {run_dir} · search_eval.csv has a human_agree column for checking the judge.")
-
-
 def show_dashboard(run: Path, where: str) -> None:
     """The sweep view for one reader comparison. `where` keeps widget keys unique per tab."""
     k = f"{where}_{run.name}"
@@ -322,6 +270,11 @@ def show_dashboard(run: Path, where: str) -> None:
                      f"quality measure. Check that `{exp['judge']}` is available and returns JSON. "
                      + (f"First error: {failures[0]}" if failures else ""))
         return
+    for _, row in df.iterrows():          # say why a reader has gaps, rather than leave an n/a
+        problems = row.get("problems")
+        if isinstance(problems, list) and problems:
+            more = f" (and {len(problems) - 1} more in summary.md)" if len(problems) > 1 else ""
+            st.warning(f"**{row['model']}**: {problems[0]}{more}")
     p = dash.PALETTES[theme_mode()]
     companies = list((exp.get("companies") or {}).values()) or exp["cases"]
     what = companies[0] if len(companies) == 1 else f"{len(companies)} companies"
@@ -338,6 +291,36 @@ def show_dashboard(run: Path, where: str) -> None:
         w_c = c2.slider("Cost", 0.0, 1.0, 0.25, 0.05, key=f"w_cost_{k}")
         w_l = c3.slider("Latency", 0.0, 1.0, 0.15, 0.05, key=f"w_latency_{k}")
     scored = dash.composite(df, w_q, w_c, w_l)
+
+    champion_now = C.current(cfg) or champion_id
+    leader = scored.iloc[0]
+    with st.container(border=True):
+        if leader["reader"] == champion_now:
+            st.markdown(f"**The champion, `{leader['model']}`, leads with your weights.** Screens keep using it.")
+        else:
+            left, right = st.columns([3, 1], vertical_alignment="center")
+            champ = scored[scored["reader"] == champion_now]
+            versus = (f"champion `{dash.short(champion_now)}` scores {champ['composite'].iloc[0]:.2f}"
+                      if not champ.empty and pd.notna(champ["composite"].iloc[0])
+                      else f"champion `{dash.short(champion_now)}` wasn't in this run")
+            left.markdown(f"**Leader with your weights: `{leader['model']}` ({leader['composite']:.2f})** · {versus}")
+            left.caption("Promoting makes it the default reader for every new screen. The change, the weights "
+                         "and the scores behind it are recorded in config/champion.json.")
+            if right.button("Promote to champion", key=f"promote_{k}", type="primary",
+                            help=f"Make {leader['reader']} the default reader for every new screen"):
+                def snapshot(reader: str) -> dict:
+                    row = scored[scored["reader"] == reader]
+                    if row.empty:
+                        return {}
+                    r = row.iloc[0]
+                    return {key: (None if pd.isna(r[key]) else float(r[key])) for key in
+                            ("composite", "quality", "cost_usd_per_company", "latency_s_per_company")}
+
+                C.promote(leader["reader"], replaced=champion_now, run=str(run),
+                          weights={"quality": w_q, "cost": w_c, "latency": w_l},
+                          scores={leader["reader"]: snapshot(leader["reader"]), champion_now: snapshot(champion_now)})
+                st.session_state["new_champion"] = leader["reader"]
+                st.rerun()
 
     tiles = st.columns(4)
     best = scored.iloc[0]
@@ -415,7 +398,7 @@ def show_dashboard(run: Path, where: str) -> None:
 
     st.subheader("Runs")
     table = dash.runs_table(df, keys)
-    pct = [c for c in table.columns if any(w in c for w in ("first try", "supported", "recall"))]
+    pct = [c for c in table.columns if any(w in c for w in ("first try", "supported"))]
     fmt = {c: st.column_config.NumberColumn(format="%.0f%%") for c in pct}
     fmt |= {c: st.column_config.NumberColumn(format="%.2f") for c in table.columns if c.startswith("L2 ")
             and c not in pct and "errors" not in c}
@@ -430,8 +413,8 @@ def show_dashboard(run: Path, where: str) -> None:
 
 st.markdown(CSS, unsafe_allow_html=True)
 st.markdown('<div class="kyb-hero"><div class="kyb-eyebrow">Tavily search · Nebius Token Factory via LiteLLM</div>'
-            '<h1>KYB screener</h1><p>Screen a company for adverse media, then evaluate both halves: did search '
-            'find what it should, and which model reads it best.</p></div>', unsafe_allow_html=True)
+            '<h1>KYB screener</h1><p>Screen a company for adverse media, with every finding checked against '
+            'its sources. Then compare reader models on the same search results.</p></div>', unsafe_allow_html=True)
 
 with st.sidebar:
     st.markdown("**Setup**")
@@ -439,8 +422,8 @@ with st.sidebar:
         st.badge("TAVILY_API_KEY", icon=":material/check_circle:", color="green")
     else:
         st.badge("TAVILY_API_KEY missing", icon=":material/error:", color="red")
-    configured = [m for m in [*defaults.values(), cfg["eval"]["judge"], *cfg["eval"]["readers"],
-                              *cfg["eval"]["planners"]] if m and m != FIXED]
+    configured = [m for m in [defaults.get("planner"), defaults.get("reader"), *defaults.get("planners", []),
+                              cfg["eval"]["judge"], *cfg["eval"]["readers"]] if m and m != FIXED]
     for provider in dict.fromkeys(m.split("/", 1)[0] for m in configured):
         gaps = missing_keys(models=[m for m in configured if m.startswith(provider + "/")])
         if gaps:
@@ -452,11 +435,16 @@ with st.sidebar:
                    "and restart the app.")
     st.caption("Models are LiteLLM strings (`nebius/...`, `openai/...`, `anthropic/...`); "
                "edit config/models.toml to switch.")
+    st.markdown(f"**Champion reader**  \n`{champion_id}`")
+    promotions = C.history()
+    st.caption(f"Promoted from {promotions[-1]['run'].rsplit('/', 1)[-1]}, replacing "
+               f"`{dash.short(promotions[-1]['replaced'])}`." if promotions else
+               "The default reader for every screen. Promote a better one from the Reader eval tab.")
     judge_id = st.text_input("Judge model", cfg["eval"]["judge"], key="judge")
     if os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT"):
         st.caption(f"Traces also go to {os.getenv('OTEL_EXPORTER_OTLP_ENDPOINT')}")
 
-tab_screen, tab_search, tab_readers, tab_results = st.tabs(["Screen", "Search eval", "Reader eval", "Results"])
+tab_screen, tab_readers, tab_results = st.tabs(["Screen", "Reader eval", "Results"])
 with tab_screen:
     with st.form("screen"):
         c1, c2 = st.columns(2)
@@ -466,10 +454,11 @@ with tab_screen:
         industry = c2.text_input("Industry")
         aliases = c1.text_input("Aliases (comma-separated)")
         notes = c2.text_input("Notes that tell it apart from similarly named companies")
-        s_planner = c1.selectbox("Planner", planner_options, key="screen_planner",
+        s_planner = c1.selectbox("Planner model", planner_options, key="screen_planner",
                                  index=planner_options.index(defaults.get("planner", FIXED)))
-        s_reader = c2.selectbox("Reader", reader_options, key="screen_reader",
-                                index=reader_options.index(defaults.get("reader", reader_options[0])))
+        s_reader = c2.selectbox("Champion reader", reader_options, key="screen_reader",
+                                index=reader_options.index(champion_id),
+                                format_func=lambda m: f"{m}  (champion)" if m == champion_id else m)
         lookback = c1.number_input("Lookback (years)", 1, 20, 5)
         s_check = c2.checkbox("Check every finding against its sources (judge model in the sidebar)",
                               True, key="screen_check")
@@ -511,7 +500,7 @@ with tab_screen:
         st.divider()
         st.subheader("Compare other readers on this screen")
         st.caption("Replays this screen's plan and search results through each reader (no new searches) and "
-                   "grades every report with the rubric judge. No answer key needed.")
+                   "grades every report with the rubric judge.")
         used = json.loads((screen_dir / "findings.json").read_text())["model"]
         if f"nebius/{used}" in reader_options:   # screened before model IDs carried the provider
             used = f"nebius/{used}"
@@ -540,108 +529,39 @@ with tab_screen:
         if st.session_state.get("compare_dir"):
             show_dashboard(Path(st.session_state["compare_dir"]), "screen")
 
-with tab_search:
-    st.caption("Eval 1. Checks whether search finds the known events listed in evals/companies.yaml, for each "
-               "planner. Only companies that list known events are used. No reader runs, so it isolates search.")
-    if not DATASET.exists():
-        st.info(f"Add {DATASET} with known events per company to run the search eval.")
-    else:
-        sdata = ev.load_dataset(DATASET)
-        with_events = [c.id for c in sdata.cases if c.expected_events]
-        s_planners = st.multiselect("Planners", planner_options, default=[FIXED] + cfg["eval"]["planners"],
-                                    key="search_planners")
-        s_planners = with_extra(s_planners, st.text_input("More planner IDs (comma-separated)",
-                                                          key="search_extra"))
-        s_cases = st.multiselect("Companies with known events", with_events, default=with_events,
-                                 key="search_cases")
-        s_missing = ev.missing_recordings(sdata.select(s_cases), s_planners, RECORDINGS)
-        s_allow = True
-        if s_missing:
-            st.warning(f"{len(s_missing)} planner recordings are missing. Recording them runs live searches: "
-                       f"up to {ev.estimate_credits(s_missing)} Tavily credits.")
-            s_allow = st.checkbox("Record them now", key="search_allow_record")
-        s_blocked = missing_keys(*(("TAVILY_API_KEY",) if s_missing else ()),
-                                 models=[judge_id, *(q for q, _ in s_missing)])
-        if s_blocked:
-            st.error(f"Set {', '.join(s_blocked)} in .env to run this.")
-        if st.button("Run search eval", type="primary", key="search_run",
-                     disabled=not s_planners or not s_cases or not s_allow or bool(s_blocked)):
-            out_dir = RESULTS / f"{stamp()}-search"
-            with st.status("Recording and judging", expanded=True) as status:
-                try:
-                    for planner in sorted({q for q, _ in s_missing}):
-                        ev.record(sdata, planner, RECORDINGS, factory.make_search_backend, factory.make_model,
-                                  cases=sdata.select([c for q, c in s_missing if q == planner]), log=status.write)
-                    ev.search_eval(sdata, s_planners, judge=factory.make_model(judge_id, "judge"),
-                                   recordings_root=RECORDINGS, out_dir=out_dir, case_ids=s_cases, log=status.write)
-                    status.update(label=f"Done: {out_dir}", state="complete", expanded=False)
-                except Exception as exc:
-                    status.update(label="Failed", state="error")
-                    model_error(exc, "The search eval")
-    search_runs = runs_of("search")
-    if search_runs:
-        st.divider()
-        show_search(st.selectbox("Search eval run", search_runs, format_func=lambda r: r.name,
-                                 key="search_pick"), "search")
-
 with tab_readers:
-    st.caption("Eval 2. The plan and search results are recorded once and held constant; each reader replays "
-               "them and the judge scores every report with the rubric. Use past screens, or the companies file.")
+    st.caption("The plan and search results of past screens are held constant; each reader replays them, and "
+               "the judge checks every finding against its sources and scores every report with the rubric.")
     with st.expander("Run a reader eval", expanded=not reader_runs()):
         screens_available = sorted((r for r in RUNS.glob("*") if (r / "findings.json").exists()), reverse=True)
-        sources = ["Past screens"] + (["evals/companies.yaml"] if DATASET.exists() else [])
-        source = st.radio("Companies from", sources, horizontal=True, key="bench_source")
-        readers = st.multiselect("Readers to compare", reader_options, default=cfg["eval"]["readers"],
+
+        def screen_label(r: Path) -> str:
+            f = json.loads((r / "findings.json").read_text())
+            return f"{f['company']['name']} · {f['as_of']} · planner {f['planner']}"
+
+        picked = st.multiselect("Screens", screens_available, format_func=screen_label, key="bench_screens",
+                                default=screens_available[:10])
+        if not screens_available:
+            st.info("No past screens yet. Screen a few companies in the Screen tab first.")
+        readers = st.multiselect("Readers to compare (the champion is included so a challenger has to beat it)",
+                                 reader_options, default=list(dict.fromkeys(cfg["eval"]["readers"] + [champion_id])),
                                  key="readers")
         readers = with_extra(readers, st.text_input("More reader IDs (comma-separated)", key="extra_readers"))
         if judge_id in readers:
             st.warning("The judge is also a reader; it will grade its own output.")
         use_pairwise = st.checkbox("Also compare reports two at a time (both orders)", False, key="use_pairwise")
-        missing = []
-        if source == "Past screens":
-            def screen_label(r: Path) -> str:
-                f = json.loads((r / "findings.json").read_text())
-                return f"{f['company']['name']} · {f['as_of']} · planner {f['planner']}"
-
-            picked = st.multiselect("Screens", screens_available, format_func=screen_label, key="bench_screens",
-                                    default=screens_available[:10])
-            if not screens_available:
-                st.info("No past screens yet. Screen a few companies in the Screen tab first.")
-            ready = bool(picked)
-        else:
-            data = ev.load_dataset(DATASET)
-            sweep_planner = cfg["eval"].get("sweep_planner", FIXED)
-            start_at = planner_options.index(sweep_planner) if sweep_planner in planner_options else 0
-            planner = st.selectbox("Fixed planner", planner_options, key="fixed_planner", index=start_at)
-            case_ids = st.multiselect("Companies", [c.id for c in data.cases], default=[c.id for c in data.cases],
-                                      key="cases")
-            missing = ev.missing_recordings(data.select(case_ids), [planner], RECORDINGS)
-            ready = bool(case_ids)
-        allow_record = True
-        if missing:
-            st.warning(f"{len(missing)} planner recordings are missing. Recording them runs live searches: "
-                       f"up to {ev.estimate_credits(missing)} Tavily credits.")
-            allow_record = st.checkbox("Record them now", key="allow_record")
-        blocked = missing_keys(*(("TAVILY_API_KEY",) if missing else ()),
-                               models=[judge_id, *readers, *(p for p, _ in missing)])
+        blocked = missing_keys(models=[judge_id, *readers])
         if blocked:
             st.error(f"Set {', '.join(blocked)} in .env to run this.")
         if st.button("Run reader eval", type="primary", key="run",
-                     disabled=not ready or not readers or not allow_record or bool(blocked)):
+                     disabled=not picked or not readers or bool(blocked)):
             run_dir = RESULTS / f"{stamp()}-readers"
-            common = dict(model_factory=factory.make_model, judge=factory.make_model(judge_id, "judge"),
-                          prices=prices, out_dir=run_dir, rubric=load_rubric(RUBRIC), pairwise=use_pairwise)
             with st.status("Replaying and judging", expanded=True) as status:
                 try:
-                    if source == "Past screens":
-                        ev.compare_screens([r / "trace.jsonl" for r in picked], readers, answer_key=DATASET,
-                                           log=status.write, **common)
-                    else:
-                        if missing:
-                            ev.record(data, planner, RECORDINGS, factory.make_search_backend, factory.make_model,
-                                      cases=data.select([c for _, c in missing]), log=status.write)
-                        ev.run_experiment(data, "readers", ev.readers_experiment(planner, readers),
-                                          recordings_root=RECORDINGS, case_ids=case_ids, log=status.write, **common)
+                    ev.compare_screens([r / "trace.jsonl" for r in picked], readers,
+                                       model_factory=factory.make_model, judge=factory.make_model(judge_id, "judge"),
+                                       prices=prices, out_dir=run_dir, rubric=load_rubric(RUBRIC),
+                                       pairwise=use_pairwise, log=status.write)
                     status.update(label=f"Done: {run_dir}", state="complete", expanded=False)
                 except Exception as exc:
                     status.update(label="Failed", state="error")
@@ -651,12 +571,9 @@ with tab_readers:
         show_dashboard(st.selectbox("Reader eval run", runs, format_func=run_label, key="dash_run"), "dash")
 
 with tab_results:
-    all_runs = sorted((p for p in RESULTS.glob("*") if (p / "experiment.json").exists()), reverse=True)
+    all_runs = reader_runs()
     if not all_runs:
         st.write("No results yet.")
     else:
         chosen_run = st.selectbox("Run", all_runs, format_func=lambda p: p.name, key="result_run")
-        if json.loads((chosen_run / "experiment.json").read_text())["kind"] == "search":
-            st.markdown((chosen_run / "summary.md").read_text())
-        else:
-            show_results(chosen_run, "results")
+        show_results(chosen_run, "results")

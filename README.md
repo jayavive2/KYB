@@ -16,17 +16,13 @@ a config edit: Nebius Token Factory models are `nebius/<model ID>`, and `openai/
 `anthropic/...`, `gemini/...` work the same way with their own key.
 
 Every run is traced with OpenTelemetry, and **the trace doubles as a recording**: it stores the plan
-and the full Tavily responses. That makes two separate evals possible, one per half of the pipeline:
+and the full Tavily responses. That makes the **reader eval** possible: with a past screen's search
+results held constant, which reader model writes the best report, at what cost and latency? A judge
+model checks every finding against its sources and grades every report on a rubric. No answer key
+is needed; it runs on any past screen.
 
-- **Eval 1, search:** did Tavily, driven by the planner, find the known events listed in
-  `evals/companies.yaml`? Each event is marked found or missed, with the sources and queries that
-  found it. No reader is involved.
-- **Eval 2, reader:** with the search results held constant, which reader model writes the best
-  report, at what cost and latency? A judge model grades every report on a rubric. This needs no
-  answer key and runs on any past screen.
-
-Both read their traces for **trace analysis**: model calls, errors, JSON repairs, latency per call,
-tokens, Tavily latency and credits, and a timeline of where each screen's time went.
+Screens and evals both read their traces for **trace analysis**: model calls, errors, JSON repairs,
+latency per call, tokens, Tavily latency and credits, and a timeline of where each screen's time went.
 
 See [TECHNICAL_STATEMENT.md](TECHNICAL_STATEMENT.md) for the reasoning and results.
 
@@ -39,14 +35,12 @@ company ─► PLANNER  reasoning model writing queries per risk category (or th
              ▼
            TAVILY SEARCH  in parallel, social media excluded
              │       ─► evidence store: deduped by URL, stable IDs S1…Sn in plan order
-             │                    ▲
-             │                    └── eval 1: are the known events in here?
              ▼
            READER   one call per category ─► JSON findings citing source IDs
              │       (schema-validated, one repair retry, unknown IDs removed)
              │       then one call grouping duplicates; code validates the groups
              │                    ▲
-             │                    └── eval 2: same evidence, other readers, rubric judge
+             │                    └── reader eval: same evidence, other readers, judged
              ▼
            SOURCE CHECK  judge reads each finding's cited sources: confirmed, or held back
              ▼
@@ -95,24 +89,21 @@ example `reader = "openai/gpt-4.1-mini"` or a reader list mixing `nebius/...` an
 `.env`. The sidebar shows which provider keys are present. Costs come from `config/models.toml` and
 fall back to LiteLLM's price list for models not priced there.
 
-The app has four tabs:
+The app has three tabs:
 
 | Tab | What it does |
 |---|---|
-| Screen | Screen one company with the default planner and reader. Shows the report, the plan, and the trace: where the time went and every model call. Then, optionally, compare other readers on the same search results. |
-| Search eval | Eval 1 for each planner against the known events in `evals/companies.yaml`. |
-| Reader eval | Eval 2 on past screens or the companies file: the dashboard and the trace analysis. |
+| Screen | Screen one company with the planner model and the champion reader. Shows the report, the plan, and the trace: where the time went and every model call. Then, optionally, compare other readers on the same search results. |
+| Reader eval | The reader eval on any set of past screens: the dashboard, the trace analysis, and promoting the leader to champion. |
 | Results | Per-run detail: summaries, two reports side by side, every judge verdict. |
 
 The same from the command line:
 
 ```bash
 uv run kyb screen "TD Bank" --country "United States" --website td.com
-uv run kyb compare runs/<timestamp>-TD_Bank/trace.jsonl        # eval 2 on that screen
-uv run kyb compare runs/*/trace.jsonl                           # eval 2 across past screens
-uv run kyb eval search --record-missing                         # eval 1
-uv run kyb eval readers --record-missing                        # eval 2 on the companies file
-uv run kyb eval agreement results/<run>/judgments.csv           # after you hand-label a sample
+uv run kyb compare runs/<timestamp>-TD_Bank/trace.jsonl        # reader eval on that screen
+uv run kyb compare runs/*/trace.jsonl                           # reader eval across past screens
+uv run kyb agreement results/<run>/judgments.csv                # after you hand-label a sample
 ```
 
 To browse traces in a UI, start [Arize Phoenix](https://arize.com/docs/phoenix) and point the
@@ -127,36 +118,18 @@ export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:6006
 `OTEL_EXPORTER_OTLP_ENDPOINT` to its `/api/public/otel` endpoint and `OTEL_EXPORTER_OTLP_HEADERS` to
 its Basic Auth header.
 
-## Eval 1: search against known events
-
-`evals/companies.yaml` is the answer key: companies with public, referenced adverse events (a
-guilty plea, a sanctions settlement, a breach, a bankruptcy) plus two namesake traps. The search
-eval records each planner's searches once per company, then the judge reads the recorded results
-and marks each known event found (and by which sources) or missed.
-
-It reports, per planner:
-
-- **coverage:** known events found, overall and by risk category
-- **every event:** found or missed, the matching sources and the queries that surfaced them, and
-  whether it was found by its own category's search or by another one
-- **from the traces:** searches per company, results per search, empty searches, Tavily latency
-  (median and slowest 5%), credits, and the planner's own call latency and output tokens
-
-Only companies that list known events are used, and no reader runs, so this isolates search. It's
-also the place to compare planners, for example the fixed plan against a reasoning model.
-
-## Eval 2: readers on fixed search results
+## The reader eval
 
 A screen's plan and search results are replayed, unchanged, through each reader. Every reader,
 the original included, is re-run on the same evidence, so all reports are produced and judged the
-same way. It runs on one screen, on any set of past screens, or on the companies file.
+same way. It runs on one screen or on any set of past screens, and spends no Tavily credits.
 
 Each reader is evaluated in three layers:
 
 | Layer | What | How |
 |---|---|---|
 | L1 deterministic | invalid citations, JSON first try, categories failed | code, no model |
-| L2 judge | rubric quality and per-criterion scores; supported on target, namesake errors; recall when known events exist | fixed judge model |
+| L2 judge | rubric quality and per-criterion scores; findings supported on target, namesake errors | fixed judge model |
 | L3 efficiency | cost and latency per company, tokens | provider usage, prices in `config/models.toml` |
 
 The rubric (`config/rubric.yaml`) has five weighted criteria. The judge sees the screening question,
@@ -177,9 +150,19 @@ material. Quality is the weighted mean of the criteria that apply.
 The **dashboard** shows how the readers trade quality, cost and latency: weight sliders with a
 ranking by the blended score, parallel coordinates across every measure, quality against cost and
 against latency with the Pareto frontier (readers nobody beats on both), rubric and per-company
-heatmaps, and a runs table grouped by layer. By default the sweep runs five readers across price
-tiers, all on Nebius: `GLM-5.3`, `MiniMax-M3`, `nemotron-3-super-120b-a12b`, `gpt-oss-120b` and
-`Qwen3-30B-A3B-Instruct-2507`.
+heatmaps, and a runs table grouped by layer. By default it compares the champion with five heavy
+hitters (see below).
+
+## The champion reader
+
+Every screen uses the **champion** reader unless you pick another. It starts as `[defaults] reader`
+in `config/models.toml` and changes only by promotion: when a reader eval's leader (by the
+dashboard's weighted score) isn't the champion, the dashboard offers **Promote to champion**.
+Each promotion is recorded in `config/champion.json` with the run, the weights and the scores of
+both models, so the history of the production reader is reviewable. Commit that file to keep it.
+The reader eval always includes the current champion, so a challenger has to beat it on the same
+evidence. By default it is compared with the heavy hitters on Token Factory: Kimi-K3.1-Pro,
+muse-spark-open, GLM-5.3, Nemotron-3-Ultra and MiniMax-M3.
 
 ## Trace analysis
 
@@ -197,8 +180,8 @@ These appear in the app, in `model_calls.csv`, and in each run's `summary.md`.
 ## The judge
 
 The judge is a fixed model kept out of the reader list. Every verdict lands in a CSV with an empty
-human column (`judgments.csv`, `recall.csv`, `coverage.csv`, `rubric.csv`, `search_eval.csv`).
-Label a sample, and `kyb eval agreement` reports how often you agree with the judge.
+human column (`judgments.csv`, `rubric.csv`, `pairwise.csv`). Label a sample, and `kyb agreement`
+reports how often you agree with the judge.
 
 ## Results
 
@@ -206,10 +189,8 @@ _Filled in from `results/<run>/summary.md` after running the evals._
 
 ## Design decisions and their costs
 
-- **Two evals, one per half.** Search quality and reading quality fail for different reasons and
-  are fixed by different people. Measuring them separately says which half to work on.
-- **Record once, replay everywhere.** A screen or planner is recorded once, so reader comparisons
-  see identical evidence and spend no Tavily credits. The recording also freezes the screen date,
+- **Record once, replay everywhere.** A screen is recorded once, so reader comparisons see
+  identical evidence and spend no Tavily credits. The recording also freezes the screen date,
   which both the search window and the reader's "today" depend on.
 - **Planners compete on queries only.** Code builds every Tavily request, keeps the date window,
   enforces the budget, and fills any category a planner skips from the fixed plan.
@@ -222,8 +203,8 @@ _Filled in from `results/<run>/summary.md` after running the evals._
 - **Duplicates are merged, not avoided.** Reading per category keeps each prompt focused, but one
   event (a guilty plea with regulatory penalties) lands in several categories. One extra reader call
   groups them; code accepts only groups of known IDs and lists the event under each category.
-- **The answer key is optional.** The rubric judges any screen against its own evidence; known
-  events add a check against what actually happened.
+- **No answer key.** The rubric and the support check judge any screen against its own evidence,
+  so the eval runs on whatever companies a team actually screens.
 - **LiteLLM's `completion` directly, no agent framework.** Any provider by config, exact requests
   and provider-reported token counts, plus a provider-independent span per model call for the trace
   analysis. JSON mode is requested and dropped per model if rejected; the output is validated either way.
@@ -231,14 +212,14 @@ _Filled in from `results/<run>/summary.md` after running the evals._
 ## Limitations
 
 - **The rubric grades against the evidence, not the truth.** If search missed something, a
-  well-cited report can still score well. Eval 1 is what catches that, for the companies with known events.
+  well-cited report can still score well. Nothing here measures what search missed.
 - **Known companies favor reasoning planners.** A planner may already know a famous company's
   scandals and aim its queries at them. Include lesser-known companies before drawing conclusions.
 - A planner's recording is one sample: rerunning it, even at temperature 0, may produce a different plan.
 - The system covers adverse media. Ownership, formal sanctions-list matching, registry and
   licensing checks need structured sources, not web search.
-- Eight companies and thirteen known events give a directional comparison, not a statistically
-  strong one. An LLM judge has its own errors; the agreement check measures them.
+- A handful of screens gives a directional comparison, not a statistically strong one. An LLM
+  judge has its own errors; the agreement check measures them.
 
 ## Layout
 
@@ -250,17 +231,18 @@ src/kyb/search.py      live Tavily backend, recordings, replay backend, traced s
 src/kyb/evidence.py    evidence store and model-facing rendering
 src/kyb/screen.py      pipeline: plan, parallel search, read, merge; citation validation
 src/kyb/llm.py         LiteLLM model, JSON parsing and repair, per-call span, readable errors
-src/kyb/judge.py       coverage, recall, support (and the per-screen source check), rubric, pairwise
+src/kyb/judge.py       support (and the per-screen source check), rubric, pairwise
 src/kyb/events.py      findings into events: duplicates merged, unconfirmed findings held back
-src/kyb/evaluate.py    eval 1 (search_eval), eval 2 (run_experiment, compare_screens), summaries
+src/kyb/champion.py    the champion reader and its promotion history
+src/kyb/evaluate.py    reader eval on past screens (compare_screens), summaries
 src/kyb/traces.py      trace analysis: model calls, search stats, stage timeline
 src/kyb/dashboard.py   sweep data, Pareto frontier, blended score, Plotly figures
 src/kyb/report.py      markdown / JSON report
 src/kyb/tracing.py     OpenTelemetry setup (file + optional OTLP)
 src/kyb/factory.py     builds live models and the search backend
 src/kyb/cli.py         `kyb` command
-evals/companies.yaml   answer key: known events per company, with references
-config/models.toml     default planner and reader, planners, readers, judge, prices
+config/models.toml     default planner, first champion, planner choices, readers, judge, prices
+config/champion.json   current champion reader and every promotion (written by the app)
 config/rubric.yaml     rubric criteria and weights
 tests/                 offline tests: fake Tavily, fake models, LiteLLM against a mock endpoint, AppTest
 .devcontainer/         GitHub Codespaces: Python 3.12, uv, key secrets, app on port 8501

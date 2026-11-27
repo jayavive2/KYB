@@ -3,17 +3,16 @@
 import json
 from pathlib import Path
 
-import yaml
 from fakes import FakeTavily
 from streamlit.testing.v1 import AppTest
-from test_eval_and_cli import DATASET, RUBRIC, fake_factory
+from test_eval_and_cli import RUBRIC, fake_factory
 
 from kyb import factory
 
 APP = Path(__file__).parents[1] / "app.py"
 
 
-def _setup(tmp_path, monkeypatch, dataset=True):
+def _setup(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("TAVILY_API_KEY", "test")
     monkeypatch.setenv("NEBIUS_API_KEY", "test")
@@ -21,12 +20,10 @@ def _setup(tmp_path, monkeypatch, dataset=True):
     monkeypatch.setattr(factory, "make_search_backend", FakeTavily)
     (tmp_path / "config").mkdir()
     (tmp_path / "config" / "models.toml").write_text(
-        '[eval]\njudge = "judge/x"\nplanners = ["fake/planner"]\nreaders = ["m/a", "m/bad"]\n'
+        '[defaults]\nplanners = ["fake/planner"]\n'
+        '[eval]\njudge = "judge/x"\nreaders = ["m/a", "m/bad"]\n'
         '[prices."m/a"]\ninput = 1.0\noutput = 2.0\n')
     (tmp_path / "config" / "rubric.yaml").write_text(RUBRIC.read_text())
-    if dataset:
-        (tmp_path / "evals").mkdir()
-        (tmp_path / "evals" / "companies.yaml").write_text(yaml.safe_dump(DATASET))
 
 
 def _app():
@@ -45,10 +42,10 @@ def _screen(at, name):
 
 
 def test_screen_shows_trace_then_compares_readers(tmp_path, monkeypatch):
-    _setup(tmp_path, monkeypatch, dataset=False)               # no companies file needed for this flow
+    _setup(tmp_path, monkeypatch)
     at = _app()
     assert not at.exception
-    assert [t.label for t in at.tabs] == ["Screen", "Search eval", "Reader eval", "Results"]
+    assert [t.label for t in at.tabs] == ["Screen", "Reader eval", "Results"]
     _screen(at, "Acme Corp")
     assert any("Screened **Acme Corp**" in s.value for s in at.success)
     assert "Search time" in _text(at) and "Read time" in _text(at)              # trace view of the screen
@@ -67,30 +64,18 @@ def test_screen_shows_trace_then_compares_readers(tmp_path, monkeypatch):
     assert at.selectbox(key="dash_run").value == run_dir        # listed in the Reader eval tab too
 
 
-def test_search_eval(tmp_path, monkeypatch):
+def test_reader_eval_from_past_screens(tmp_path, monkeypatch):
     _setup(tmp_path, monkeypatch)
     at = _app()
-    assert at.multiselect(key="search_planners").value == ["fixed", "fake/planner"]
-    assert at.multiselect(key="search_cases").value == ["acme"]   # only companies with known events
-    assert at.button(key="search_run").disabled                   # recordings missing, not yet allowed
-    at.checkbox(key="search_allow_record").check().run()
-    at.button(key="search_run").click().run()
-    assert not at.exception, at.exception
-    run_dir = next(Path("results").glob("*-search"))
-    assert at.selectbox(key="search_pick").value == run_dir
-    assert "Coverage · fixed" in _text(at) and "Coverage · planner" in _text(at)
-    assert any("Missed" in m.value for m in at.markdown)
-
-
-def test_reader_eval_from_companies_file_with_trace_analysis(tmp_path, monkeypatch):
-    _setup(tmp_path, monkeypatch)
+    for name in ("Acme Corp", "Beta Inc"):
+        _screen(at, name)
     at = _app()
-    assert at.button(key="run").disabled                          # no past screens yet
-    at.radio(key="bench_source").set_value("evals/companies.yaml").run()
-    at.checkbox(key="allow_record").check().run()
+    assert len(at.multiselect(key="bench_screens").value) == 2
     at.button(key="run").click().run()
     assert not at.exception, at.exception
     run_dir = next(Path("results").glob("*-readers"))
+    exp = json.loads((run_dir / "experiment.json").read_text())
+    assert exp["source"] == "screens" and sorted(exp["companies"].values()) == ["Acme Corp", "Beta Inc"]
     assert at.selectbox(key="dash_run").value == run_dir
     k = f"dash_{run_dir.name}"
     assert at.selectbox(key=f"wf_reader_{k}").value in ("m/a", "m/bad")      # timeline pickers
@@ -99,27 +84,12 @@ def test_reader_eval_from_companies_file_with_trace_analysis(tmp_path, monkeypat
     assert not at.exception
 
 
-def test_reader_eval_from_past_screens(tmp_path, monkeypatch):
-    _setup(tmp_path, monkeypatch)
-    at = _app()
-    for name in ("Acme Corp", "Beta Inc"):
-        _screen(at, name)
-    at = _app()
-    assert at.radio(key="bench_source").value == "Past screens"
-    assert len(at.multiselect(key="bench_screens").value) == 2
-    at.button(key="run").click().run()
-    assert not at.exception, at.exception
-    exp = json.loads(next(Path("results").glob("*-readers/experiment.json")).read_text())
-    assert exp["source"] == "screens" and sorted(exp["companies"].values()) == ["Acme Corp", "Beta Inc"]
-
-
 def test_runs_are_blocked_without_keys(tmp_path, monkeypatch):
     _setup(tmp_path, monkeypatch)
     monkeypatch.delenv("NEBIUS_API_KEY")
     at = _app()
     at.text_input(key="judge").input("nebius/some-judge").run()   # LiteLLM: nebius/... needs NEBIUS_API_KEY
-    at.checkbox(key="search_allow_record").check().run()
-    assert at.button(key="search_run").disabled
+    assert at.button(key="run").disabled
     assert any("NEBIUS_API_KEY" in e.value for e in at.error)
 
 
@@ -132,7 +102,7 @@ def test_a_failed_screen_shows_one_actionable_line(tmp_path, monkeypatch):
         def search(self, params):
             raise InvalidAPIKeyError("Unauthorized: missing or invalid API key.")
 
-    _setup(tmp_path, monkeypatch, dataset=False)
+    _setup(tmp_path, monkeypatch)
     monkeypatch.setattr(factory, "make_search_backend", BadKey)
     at = _app()
     at.text_input(key="screen_name").input("Acme Corp")
@@ -141,3 +111,28 @@ def test_a_failed_screen_shows_one_actionable_line(tmp_path, monkeypatch):
     # The traceback is still there, folded into "Details", and the page kept rendering.
     assert [str(x.message) for x in at.exception] == ["Unauthorized: missing or invalid API key."]
     assert at.button(key="screen_submit") is not None and "screen_dir" not in at.session_state
+
+
+def test_promote_the_leader_to_champion(tmp_path, monkeypatch):
+    from kyb import champion as C
+
+    _setup(tmp_path, monkeypatch)
+    (tmp_path / "config" / "models.toml").write_text(       # the champion starts as the weaker reader
+        '[defaults]\nreader = "m/bad"\n[eval]\njudge = "judge/x"\nreaders = ["m/a"]\n')
+    at = _app()
+    assert at.selectbox(key="screen_reader").value == "m/bad"
+    _screen(at, "Acme Corp")
+    at = _app()
+    assert at.multiselect(key="readers").value == ["m/a", "m/bad"]     # the champion is always compared
+    at.button(key="run").click().run()
+    assert not at.exception, at.exception
+    run_dir = next(Path("results").glob("*-readers"))
+    assert "Leader with your weights" in _text(at)
+    at.button(key=f"promote_dash_{run_dir.name}").click().run()
+    assert not at.exception, at.exception
+    assert C.current({}) == "m/a" and at.selectbox(key="screen_reader").value == "m/a"
+    (entry,) = C.history()
+    assert entry["replaced"] == "m/bad" and entry["run"] == str(run_dir) and entry["weights"]["quality"] == 0.6
+    assert entry["scores"]["m/a"]["quality"] > entry["scores"]["m/bad"]["quality"]
+    assert "leads with your weights" in _text(at)                    # no button once the leader is champion
+    assert not any(b.key == f"promote_dash_{run_dir.name}" for b in at.button)

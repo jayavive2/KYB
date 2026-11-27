@@ -3,7 +3,7 @@
 __pycache__/
 *.pyc
 .pytest_cache/
-# Ad-hoc screens. Eval recordings/ and results/ are committed on purpose: reviewers can
-# rerun the model comparison from the recordings with only a Nebius key.
+# Screens are ad hoc. To let a reviewer replay one through other readers (Nebius key only, no
+# Tavily credits), add it on purpose: git add -f runs/<screen>. Reader-eval results/ are committed.
 runs/
 .ruff_cache/

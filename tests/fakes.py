@@ -83,17 +83,7 @@ class FakeJudge:
     def chat(self, messages: list[dict]) -> ChatResult:
         self.calls.append(messages)
         system, user = messages[0]["content"], messages[1]["content"]
-        if "known events appear in a set of search results" in system:
-            events = re.findall(r"^- (\S+) \(", user, re.M)
-            first_source = re.search(r"^\[(S\d+)\]", user, re.M).group(1)
-            out = {"events": [{"event_id": events[0], "source_ids": [first_source]}]
-                   + [{"event_id": e, "source_ids": []} for e in events[1:]]}
-        elif "match known events" in system:
-            events = re.findall(r"^- (\S+) \(", user.split("Findings:")[0], re.M)
-            findings = re.findall(r"^- (\S+) \(", user.split("Findings:")[1], re.M)
-            out = {"matches": [{"event_id": e, "finding_id": findings[0] if i == 0 else None}
-                               for i, e in enumerate(events)]}
-        elif "against a rubric" in system:
+        if "against a rubric" in system:
             out = {"scores": {"citation": {"score": 4, "reason": "ok"}, "scope": {"score": 3},
                               "relevance": {"score": 5}, "specificity": {"score": 4},
                               "calibration": {"score": None}, "made_up_key": {"score": 1}}}

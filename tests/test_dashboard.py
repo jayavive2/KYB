@@ -1,6 +1,6 @@
 import pandas as pd
-from fakes import FakeJudge, FakeTavily
-from test_eval_and_cli import RUBRIC, _dataset, fake_factory
+from fakes import FakeJudge
+from test_eval_and_cli import RUBRIC, fake_factory, screens
 
 from kyb import dashboard as dash
 from kyb import evaluate as ev
@@ -30,14 +30,11 @@ def test_labels_and_ticks():
 
 
 def test_five_reader_sweep_feeds_the_dashboard(tmp_path):
-    data = ev.load_dataset(_dataset(tmp_path))
-    root = tmp_path / "recordings"
-    ev.record(data, "fake/planner", root, FakeTavily, fake_factory, log=lambda *_: None)
+    traces = screens(tmp_path, ["Acme Corp", "Beta Inc"], ["fake/planner", "fake/planner"])
     judge = FakeJudge()
     out = tmp_path / "results" / "sweep-readers"
-    ev.run_experiment(data, "readers", ev.readers_experiment("fake/planner", READERS), model_factory=fake_factory,
-                      judge=judge, prices=PRICES, recordings_root=root, out_dir=out,
-                      rubric=load_rubric(RUBRIC), pairwise=False, log=lambda *_: None)
+    ev.compare_screens(traces, READERS, model_factory=fake_factory, judge=judge, prices=PRICES, out_dir=out,
+                       rubric=load_rubric(RUBRIC), pairwise=False, log=lambda *_: None)
 
     rubric_calls = [c for c in judge.calls if "against a rubric" in c[0]["content"]]
     assert len(rubric_calls) == 2 * len(READERS)

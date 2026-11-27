@@ -2,12 +2,9 @@
 
   kyb screen "Company"            live: plan, search, read; writes a report and a replayable trace
   kyb replay <trace.jsonl>        same plan and evidence, another reader
-  kyb compare <trace.jsonl>...    reader eval on past screens (search held constant, rubric judge)
+  kyb compare <trace.jsonl>...    reader eval on past screens (search held constant, judged)
   kyb models                      models your Nebius key can use
-  kyb eval search                 eval 1: did search find the known events in evals/companies.yaml?
-  kyb eval readers                eval 2 on the companies file: readers on fixed search results
-  kyb eval record                 record a planner's searches for the companies file
-  kyb eval agreement              judge vs your hand labels
+  kyb agreement <judgments.csv>   judge vs your hand labels
 """
 
 from __future__ import annotations
@@ -40,21 +37,12 @@ load_dotenv()
 
 app = typer.Typer(add_completion=False, no_args_is_help=True,
                   help="KYB adverse-media screening on Tavily + Nebius, with trace replay.")
-eval_app = typer.Typer(no_args_is_help=True,
-                       help="The two evals on evals/companies.yaml: search vs known events; readers on fixed search.")
-app.add_typer(eval_app, name="eval")
 console = Console()
 
 CONFIG = Path("config/models.toml")
 RUBRIC = Path("config/rubric.yaml")
-DATASET = Path("evals/companies.yaml")
-RECORDINGS = Path("recordings")
 
-
-DatasetOpt = Annotated[Path, typer.Option(help="Eval cases YAML")]
-CasesOpt = Annotated[Optional[str], typer.Option(help="Comma-separated case IDs (default: all)")]
 JudgeOpt = Annotated[Optional[str], typer.Option(help="Judge model ID (default: config)")]
-RecordOpt = Annotated[bool, typer.Option(help="Record missing planner searches live (uses Tavily credits)")]
 
 
 def _config() -> dict:
@@ -62,6 +50,11 @@ def _config() -> dict:
 
 
 def _default(role: str, fallback: str) -> str:
+    """KYB_PLANNER / KYB_READER, else config. The reader default is the champion (config/champion.json)."""
+    if role == "reader":
+        from .champion import current
+
+        return os.getenv("KYB_READER") or current(_config()) or fallback
     return os.getenv(f"KYB_{role.upper()}") or _config().get("defaults", {}).get(role, fallback)
 
 
@@ -159,7 +152,7 @@ def screen(
     alias: Annotated[Optional[list[str]], typer.Option(help="Other names; repeatable")] = None,
     notes: Annotated[Optional[str], typer.Option(help="Anything that tells it apart from namesakes")] = None,
     planner: Annotated[Optional[str], typer.Option(help="'fixed' or a model ID")] = None,
-    reader: Annotated[Optional[str], typer.Option(help="Model that reads results and writes findings")] = None,
+    reader: Annotated[Optional[str], typer.Option(help="Reader model (default: the champion)")] = None,
     lookback_years: Annotated[int, typer.Option(help="Only events this recent")] = 5,
     as_of: Annotated[Optional[str], typer.Option(help="Screen date YYYY-MM-DD (default today)")] = None,
     search_only: Annotated[bool, typer.Option(help="Plan and search, no reader")] = False,
@@ -227,12 +220,14 @@ def compare(
     readers: Annotated[Optional[str], typer.Option(help="Comma-separated readers (default: config)")] = None,
     judge: JudgeOpt = None,
     pairwise: Annotated[bool, typer.Option(help="Also compare reports two at a time")] = False,
-    answer_key: Annotated[Optional[Path], typer.Option(help="Known events, matched by company name")] = DATASET,
+    parallel: Annotated[int, typer.Option(help="Readers to run at once on each screen")] = 5,
 ) -> None:
     """Reader eval on past screens: plan and search results held constant, readers swapped, rubric-judged."""
     cfg = _config()
     judge_id = judge or cfg["eval"]["judge"]
-    reader_ids = _ids(readers) or cfg["eval"]["readers"]
+    from .champion import current
+
+    reader_ids = _ids(readers) or list(dict.fromkeys(cfg["eval"]["readers"] + [current(cfg)]))
     _require_keys(judge_id, *reader_ids)
     if judge_id in reader_ids:
         console.print("[yellow]The judge is also a reader; it will grade its own output.[/yellow]")
@@ -241,7 +236,7 @@ def compare(
     out_dir = Path("results") / f"{_stamp()}-compare-{what}"
     ev.compare_screens(traces, reader_ids, model_factory=factory.make_model,
                        judge=factory.make_model(judge_id, "judge"), prices=cfg.get("prices", {}), out_dir=out_dir,
-                       answer_key=answer_key, rubric=load_rubric(RUBRIC), pairwise=pairwise, log=console.print)
+                       rubric=load_rubric(RUBRIC), pairwise=pairwise, log=console.print, parallel=parallel)
     console.print(Markdown((out_dir / "summary.md").read_text(encoding="utf-8")))
     console.print(f"\nResults: {out_dir}\nDashboard: uv run streamlit run app.py (Reader eval tab)")
 
@@ -261,93 +256,8 @@ def models() -> None:
                   "anthropic/<model> (ANTHROPIC_API_KEY), ... See docs.litellm.ai/docs/providers.")
 
 
-def _record_missing(dataset: ev.Dataset, planners: list[str], case_ids: list[str] | None, allowed: bool) -> None:
-    missing = ev.missing_recordings(dataset.select(case_ids), planners, RECORDINGS)
-    if not missing:
-        return
-    credits = ev.estimate_credits(missing)
-    if not allowed:
-        console.print(f"[red]{len(missing)} recordings are missing[/red] (up to {credits} Tavily credits to "
-                      "record). Rerun with --record-missing, or use `kyb eval record`.")
-        raise typer.Exit(1)
-    _require_tavily()
-    console.print(f"Recording {len(missing)} missing (planner, company) pairs, up to {credits} Tavily credits.")
-    for planner in sorted({p for p, _ in missing}):
-        ids = [c for p, c in missing if p == planner]
-        ev.record(dataset, planner, RECORDINGS, factory.make_search_backend, factory.make_model,
-                  cases=dataset.select(ids), log=console.print)
-
-
-def _run(kind: str, arms: list[ev.Arm], dataset_path: Path, judge: str | None, case_ids: list[str] | None,
-         rubric: bool, pairwise: bool) -> None:
-    cfg = _config()
-    judge_id = judge or cfg["eval"]["judge"]
-    if any(judge_id in (a.planner, a.reader) for a in arms):
-        console.print("[yellow]The judge is also one of the arms; it will grade its own output.[/yellow]")
-    out_dir = Path("results") / f"{_stamp()}-{kind}"
-    ev.run_experiment(ev.load_dataset(dataset_path), kind, arms, model_factory=factory.make_model,
-                      judge=factory.make_model(judge_id, "judge"), prices=cfg.get("prices", {}),
-                      recordings_root=RECORDINGS, out_dir=out_dir,
-                      rubric=load_rubric(RUBRIC) if rubric else None, pairwise=pairwise,
-                      case_ids=case_ids, log=console.print)
-    console.print(Markdown((out_dir / "summary.md").read_text(encoding="utf-8")))
-    console.print(f"\nResults: {out_dir}")
-
-
-
-
-@eval_app.command("record")
-def eval_record(
-    planner: Annotated[str, typer.Option(help="'fixed' or a model ID")] = FIXED,
-    dataset: DatasetOpt = DATASET, cases: CasesOpt = None,
-    force: Annotated[bool, typer.Option(help="Re-record cases that already have a recording")] = False,
-) -> None:
-    """Plan and search live, once per company. Experiments then replay these recordings."""
-    _require_tavily()
-    _require_keys(planner)
-    data = ev.load_dataset(dataset)
-    ev.record(data, planner, RECORDINGS, factory.make_search_backend, factory.make_model,
-              cases=data.select(_ids(cases)), force=force, log=console.print)
-
-
-@eval_app.command("readers")
-def eval_readers(
-    planner: Annotated[Optional[str], typer.Option(help="Planner whose recordings every reader gets "
-                                                   "(default: config sweep_planner)")] = None,
-    readers: Annotated[Optional[str], typer.Option(help="Comma-separated reader IDs (default: config)")] = None,
-    dataset: DatasetOpt = DATASET, cases: CasesOpt = None, judge: JudgeOpt = None,
-    rubric: bool = True, pairwise: bool = True, record_missing: RecordOpt = False,
-) -> None:
-    """Eval 2: swap the reader. The planner and its recorded search results stay fixed."""
-    ids = _ids(readers) or _config()["eval"]["readers"]
-    planner = planner or _config()["eval"].get("sweep_planner", FIXED)
-    _require_keys(planner, _config()["eval"]["judge"] if judge is None else judge, *ids)
-    _record_missing(ev.load_dataset(dataset), [planner], _ids(cases), record_missing)
-    _run("readers", ev.readers_experiment(planner, ids), dataset, judge, _ids(cases), rubric, pairwise)
-
-
-@eval_app.command("search")
-def eval_search(
-    planners: Annotated[Optional[str], typer.Option(help="Comma-separated: 'fixed' and/or model IDs "
-                                                    "(default: fixed + config planners)")] = None,
-    dataset: DatasetOpt = DATASET, cases: CasesOpt = None, judge: JudgeOpt = None,
-    record_missing: RecordOpt = False,
-) -> None:
-    """Eval 1: did search find the known events in the companies file? No reader runs."""
-    cfg = _config()
-    ids = _ids(planners) or [FIXED] + cfg["eval"]["planners"]
-    _require_keys(judge or cfg["eval"]["judge"], *ids)
-    data = ev.load_dataset(dataset)
-    _record_missing(data, ids, _ids(cases), record_missing)
-    out_dir = Path("results") / f"{_stamp()}-search"
-    ev.search_eval(data, ids, judge=factory.make_model(judge or cfg["eval"]["judge"], "judge"),
-                   recordings_root=RECORDINGS, out_dir=out_dir, case_ids=_ids(cases), log=console.print)
-    console.print(Markdown((out_dir / "summary.md").read_text(encoding="utf-8")))
-    console.print(f"\nResults: {out_dir}")
-
-
-@eval_app.command("agreement")
-def eval_agreement(
+@app.command()
+def agreement(
     judgments: Annotated[Path, typer.Argument(help="judgments.csv with human_* columns filled (y/n)")],
 ) -> None:
     """Report how often your labels agree with the judge's."""

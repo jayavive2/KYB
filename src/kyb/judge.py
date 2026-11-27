@@ -1,8 +1,7 @@
-"""LLM judges. One fixed judge model answers five kinds of question:
+"""LLM judges. One fixed judge model answers three kinds of question:
 
-  coverage  - is each known event in the search results at all?        (per recording)
-  recall    - which finding, if any, reports each known event?         (per report)
-  support   - is each finding about the target, and backed by its sources? (per finding)
+  support   - is each finding about the target, and backed by its sources? (per finding; also the
+              source check on every screen)
   rubric    - 1-5 scores on criteria from config/rubric.yaml           (per report)
   pairwise  - which of two reports would an analyst rather rely on?    (per pair, both orders)
 
@@ -11,6 +10,9 @@ Every verdict is written to CSV so a person can audit a sample.
 
 from __future__ import annotations
 
+import contextvars
+import os
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -19,7 +21,7 @@ from openinference.semconv.trace import OpenInferenceSpanKindValues, SpanAttribu
 from pydantic import BaseModel, Field
 
 from .events import SourceCheck, build_events
-from .evidence import EvidenceStore, render_sources
+from .evidence import render_sources
 from .llm import ChatModel, JsonCallResult, complete_json, describe_error
 from .plan import window_start
 from .schema import Company, Judgment
@@ -29,8 +31,18 @@ from .tracing import get_tracer, set_io
 JUDGE_FAILURES: list[str] = []  # reset per experiment; reported in the summary
 
 
+# Readers run in parallel and each judges its own report, so judge calls are capped here: enough to
+# keep the eval fast, few enough that one judge model isn't flooded. KYB_JUDGE_CONCURRENCY overrides.
+JUDGE_CONCURRENCY = int(os.getenv("KYB_JUDGE_CONCURRENCY", "8"))
+_JUDGE_SLOTS = threading.BoundedSemaphore(JUDGE_CONCURRENCY)
+
+# Where the current reader's judge failures go. Set per reader in the eval; worker threads started
+# with contextvars.copy_context() see the same list, so failures land on the right reader.
+FAILURE_SINK: contextvars.ContextVar[list[str] | None] = contextvars.ContextVar("judge_failure_sink", default=None)
+
+
 def judge_call(judge: ChatModel, name: str, system: str, user: str, schema) -> JsonCallResult:
-    with get_tracer().start_as_current_span(f"kyb.judge.{name}") as span:
+    with _JUDGE_SLOTS, get_tracer().start_as_current_span(f"kyb.judge.{name}") as span:  # wait outside the span
         span.set_attribute(SpanAttributes.OPENINFERENCE_SPAN_KIND,
                            OpenInferenceSpanKindValues.EVALUATOR.value)
         try:
@@ -40,7 +52,11 @@ def judge_call(judge: ChatModel, name: str, system: str, user: str, schema) -> J
             span.record_exception(exc)
             call = JsonCallResult(value=None, attempts=0, errors=[describe_error(exc, judge.model)])
         if call.value is None:
-            JUDGE_FAILURES.append(f"{name}: {call.errors[-1] if call.errors else 'no output'}")
+            failure = f"{name}: {call.errors[-1] if call.errors else 'no output'}"
+            JUDGE_FAILURES.append(failure)
+            sink = FAILURE_SINK.get()
+            if sink is not None:
+                sink.append(failure)
         set_io(span, output_value=call.value.model_dump() if call.value else {"errors": call.errors})
         return call
 
@@ -74,45 +90,11 @@ def _context(company: Company, result: ScreenResult) -> str:
             f"Screen date {result.as_of}; events in scope from {start}.")
 
 
-# ---------------------------------------------------------------- coverage, recall, support
-
-class _CoverageItem(BaseModel):
-    event_id: str
-    source_ids: list[str] = []
-
-
-class _Coverage(BaseModel):
-    events: list[_CoverageItem]
-
-
-class _Match(BaseModel):
-    event_id: str
-    finding_id: str | None = None
-
-
-class _Matches(BaseModel):
-    matches: list[_Match]
-
+# ---------------------------------------------------------------- support
 
 class _Judgments(BaseModel):
     judgments: list[Judgment]
 
-
-COVERAGE_PROMPT = """You check whether known events appear in a set of search results about a company.
-For each event, list the IDs of sources whose text describes that specific event for the target
-company. Use only the text shown. If no source describes it, return an empty list.
-
-Target company:
-{identity}
-
-Return only JSON: {{"events": [{{"event_id": "...", "source_ids": ["S1"]}}]}}"""
-
-RECALL_PROMPT = """You match known events to the findings of an adverse-media screen.
-For each known event, give the ID of the finding that reports the same underlying event
-(same company, same action or incident), even if worded differently or less detailed.
-If no finding reports it, use null.
-
-Return only JSON: {"matches": [{"event_id": "...", "finding_id": "regulatory-1"}]}"""
 
 SUPPORT_PROMPT = """You audit findings from an adverse-media screen of the target company below.
 For each finding, read only its cited sources and decide:
@@ -126,42 +108,6 @@ Target company:
 
 Return only JSON:
 {{"judgments": [{{"finding_id": "...", "about_target": true, "supported": true, "reason": "short"}}]}}"""
-
-
-def _event_lines(events) -> str:
-    return "\n".join(f"- {e.id} ({e.category}, {e.date or 'date n/a'}): {e.description}" for e in events)
-
-
-def judge_coverage(judge: ChatModel, company: Company, events, evidence: EvidenceStore) -> dict[str, list[str]]:
-    if not events:
-        return {}
-    user = (f"Known events:\n{_event_lines(events)}\n\nSearch results:\n\n"
-            f"{render_sources(evidence.all(), max_chars=1500)}")
-    call = judge_call(judge, "coverage", COVERAGE_PROMPT.format(identity=company.identity_block()),
-                      user, _Coverage)
-    known = {s.id for s in evidence.all()}
-    out = {e.id: [] for e in events}
-    if call.value:
-        for item in call.value.events:
-            if item.event_id in out:
-                out[item.event_id] = [s for s in item.source_ids if s in known]
-    return out
-
-
-def judge_recall(judge: ChatModel, events, result: ScreenResult) -> dict[str, str | None]:
-    out: dict[str, str | None] = {e.id: None for e in events}
-    if not events or not result.findings:
-        return out
-    fs = "\n".join(f"- {f.id} ({f.category}, {f.finding.event_date or 'date n/a'}): {f.finding.summary}"
-                   for f in result.findings)
-    call = judge_call(judge, "recall", RECALL_PROMPT,
-                      f"Known events:\n{_event_lines(events)}\n\nFindings:\n{fs}", _Matches)
-    ids = {f.id for f in result.findings}
-    if call.value:
-        for m in call.value.matches:
-            if m.event_id in out and m.finding_id in ids:
-                out[m.event_id] = m.finding_id
-    return out
 
 
 def judge_support(judge: ChatModel, company: Company, result: ScreenResult,

@@ -1,0 +1,50 @@
+{
+  "kind": "readers",
+  "created": "2026-11-27T06:02:31",
+  "arms": [
+    {
+      "planner": "nebius/moonshotai/Kimi-K3.1-Pro",
+      "reader": "nebius/zai-org/GLM-5.3",
+      "label": "nebius/zai-org/GLM-5.3"
+    },
+    {
+      "planner": "nebius/moonshotai/Kimi-K3.1-Pro",
+      "reader": "nebius/MiniMaxAI/MiniMax-M3",
+      "label": "nebius/MiniMaxAI/MiniMax-M3"
+    },
+    {
+      "planner": "nebius/moonshotai/Kimi-K3.1-Pro",
+      "reader": "nebius/nvidia/nemotron-3-super-120b-a12b",
+      "label": "nebius/nvidia/nemotron-3-super-120b-a12b"
+    },
+    {
+      "planner": "nebius/moonshotai/Kimi-K3.1-Pro",
+      "reader": "nebius/openai/gpt-oss-120b",
+      "label": "nebius/openai/gpt-oss-120b"
+    },
+    {
+      "planner": "nebius/moonshotai/Kimi-K3.1-Pro",
+      "reader": "nebius/Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "label": "nebius/Qwen/Qwen3-30B-A3B-Instruct-2507"
+    }
+  ],
+  "cases": [
+    "TD_Bank"
+  ],
+  "judge": "nebius/deepseek-ai/DeepSeek-V4-Pro-0813",
+  "rubric": [
+    "citation",
+    "scope",
+    "relevance",
+    "specificity",
+    "calibration"
+  ],
+  "pairwise": false,
+  "judge_failures": [
+    "rubric: no JSON object found in the output"
+  ],
+  "source": "screens",
+  "companies": {
+    "TD_Bank": "TD Bank"
+  }
+}

@@ -1,0 +1,6 @@
+arm,case,event_id,in_evidence,matched_finding,human_agree
+nebius/zai-org/GLM-5.3,TD_Bank,aml-plea-2024,True,,
+nebius/MiniMaxAI/MiniMax-M3,TD_Bank,aml-plea-2024,True,financial_crime-1,
+nebius/nvidia/nemotron-3-super-120b-a12b,TD_Bank,aml-plea-2024,True,financial_crime-1,
+nebius/openai/gpt-oss-120b,TD_Bank,aml-plea-2024,True,financial_crime-1,
+nebius/Qwen/Qwen3-30B-A3B-Instruct-2507,TD_Bank,aml-plea-2024,True,financial_crime-1,

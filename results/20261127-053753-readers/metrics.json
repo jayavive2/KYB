@@ -1,0 +1,172 @@
+[
+  {
+    "arm": "nebius/zai-org/GLM-5.3",
+    "planner": "nebius/moonshotai/Kimi-K3.1-Pro",
+    "reader": "nebius/zai-org/GLM-5.3",
+    "cases": 1,
+    "price_input_per_m": 1.4,
+    "price_output_per_m": 4.4,
+    "quality": 1.0,
+    "rubric": {
+      "citation": null,
+      "scope": 1.0,
+      "relevance": null,
+      "specificity": null,
+      "calibration": null
+    },
+    "pairwise": {
+      "wins": 0,
+      "ties": 0,
+      "losses": 0
+    },
+    "recall": 0.0,
+    "recall_given_evidence": 0.0,
+    "supported_on_target": null,
+    "namesake_errors": 0,
+    "invalid_citations": 0,
+    "json_first_try": 0.14285714285714285,
+    "categories_failed": 6,
+    "cost_usd_per_company": 0.5372616,
+    "latency_s_per_company": 182.75083255799996,
+    "input_tokens": 73178,
+    "output_tokens": 98821,
+    "findings": 0,
+    "run_errors": 0
+  },
+  {
+    "arm": "nebius/MiniMaxAI/MiniMax-M3",
+    "planner": "nebius/moonshotai/Kimi-K3.1-Pro",
+    "reader": "nebius/MiniMaxAI/MiniMax-M3",
+    "cases": 1,
+    "price_input_per_m": 0.3,
+    "price_output_per_m": 1.2,
+    "quality": null,
+    "rubric": {
+      "citation": null,
+      "scope": null,
+      "relevance": null,
+      "specificity": null,
+      "calibration": null
+    },
+    "pairwise": {
+      "wins": 0,
+      "ties": 0,
+      "losses": 0
+    },
+    "recall": 1.0,
+    "recall_given_evidence": 1.0,
+    "supported_on_target": 0.9117647058823529,
+    "namesake_errors": 0,
+    "invalid_citations": 0,
+    "json_first_try": 1.0,
+    "categories_failed": 0,
+    "cost_usd_per_company": 0.017981399999999998,
+    "latency_s_per_company": 9.049930997000047,
+    "input_tokens": 41078,
+    "output_tokens": 4715,
+    "findings": 34,
+    "run_errors": 0
+  },
+  {
+    "arm": "nebius/nvidia/nemotron-3-super-120b-a12b",
+    "planner": "nebius/moonshotai/Kimi-K3.1-Pro",
+    "reader": "nebius/nvidia/nemotron-3-super-120b-a12b",
+    "cases": 1,
+    "price_input_per_m": 0.3,
+    "price_output_per_m": 0.9,
+    "quality": 3.3,
+    "rubric": {
+      "citation": 3.0,
+      "scope": 3.0,
+      "relevance": 3.0,
+      "specificity": 4.0,
+      "calibration": 4.0
+    },
+    "pairwise": {
+      "wins": 0,
+      "ties": 0,
+      "losses": 0
+    },
+    "recall": 1.0,
+    "recall_given_evidence": 1.0,
+    "supported_on_target": 0.9393939393939394,
+    "namesake_errors": 1,
+    "invalid_citations": 0,
+    "json_first_try": 1.0,
+    "categories_failed": 0,
+    "cost_usd_per_company": 0.0369342,
+    "latency_s_per_company": 40.864047879999816,
+    "input_tokens": 43239,
+    "output_tokens": 26625,
+    "findings": 33,
+    "run_errors": 0
+  },
+  {
+    "arm": "nebius/openai/gpt-oss-120b",
+    "planner": "nebius/moonshotai/Kimi-K3.1-Pro",
+    "reader": "nebius/openai/gpt-oss-120b",
+    "cases": 1,
+    "price_input_per_m": 0.15,
+    "price_output_per_m": 0.6,
+    "quality": 3.25,
+    "rubric": {
+      "citation": 2.0,
+      "scope": 3.0,
+      "relevance": 4.0,
+      "specificity": 3.0,
+      "calibration": 5.0
+    },
+    "pairwise": {
+      "wins": 0,
+      "ties": 0,
+      "losses": 0
+    },
+    "recall": 1.0,
+    "recall_given_evidence": 1.0,
+    "supported_on_target": 0.7741935483870968,
+    "namesake_errors": 3,
+    "invalid_citations": 0,
+    "json_first_try": 1.0,
+    "categories_failed": 0,
+    "cost_usd_per_company": 0.012724799999999998,
+    "latency_s_per_company": 12.19551199999978,
+    "input_tokens": 39396,
+    "output_tokens": 11359,
+    "findings": 31,
+    "run_errors": 0
+  },
+  {
+    "arm": "nebius/Qwen/Qwen3-30B-A3B-Instruct-2507",
+    "planner": "nebius/moonshotai/Kimi-K3.1-Pro",
+    "reader": "nebius/Qwen/Qwen3-30B-A3B-Instruct-2507",
+    "cases": 1,
+    "price_input_per_m": 0.1,
+    "price_output_per_m": 0.3,
+    "quality": 3.0,
+    "rubric": {
+      "citation": 3.0,
+      "scope": 3.0,
+      "relevance": 3.0,
+      "specificity": 3.0,
+      "calibration": 3.0
+    },
+    "pairwise": {
+      "wins": 0,
+      "ties": 0,
+      "losses": 0
+    },
+    "recall": 1.0,
+    "recall_given_evidence": 1.0,
+    "supported_on_target": 0.8571428571428571,
+    "namesake_errors": 1,
+    "invalid_citations": 0,
+    "json_first_try": 1.0,
+    "categories_failed": 0,
+    "cost_usd_per_company": 0.0054213,
+    "latency_s_per_company": 14.729868648999854,
+    "input_tokens": 42276,
+    "output_tokens": 3979,
+    "findings": 21,
+    "run_errors": 0
+  }
+]

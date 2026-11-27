@@ -117,12 +117,11 @@ def composite(df: pd.DataFrame, w_quality: float, w_cost: float, w_latency: floa
 
 def runs_table(df: pd.DataFrame, rubric_keys: list[str]) -> pd.DataFrame:
     """The W&B-style runs table: one row per reader, columns grouped by evaluation layer."""
-    cols = {"model": "Reader"}
+    cols = {"model": "Reader", "events": "Events"}
     cols |= {"invalid_citations": "L1 invalid citations", "json_first_try": "L1 JSON first try",
              "categories_failed": "L1 categories failed"}
     cols |= {"quality": "L2 quality"} | {f"rubric_{k}": f"L2 {k}" for k in rubric_keys}
-    cols |= {"supported_on_target": "L2 supported on target", "recall_given_evidence": "L2 recall given evidence",
-             "namesake_errors": "L2 namesake errors"}
+    cols |= {"supported_on_target": "L2 supported on target", "namesake_errors": "L2 namesake errors"}
     cols |= {"cost_usd_per_company": "L3 $ / company", "latency_s_per_company": "L3 sec / company",
              "input_tokens": "L3 input tokens", "output_tokens": "L3 output tokens"}
     present = {k: v for k, v in cols.items() if k in df.columns}

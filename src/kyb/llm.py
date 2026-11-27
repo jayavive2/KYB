@@ -33,6 +33,7 @@ class ChatResult:
     prompt_tokens: int
     completion_tokens: int
     latency_s: float
+    finish_reason: str = ""  # "length" = the model hit max_tokens before finishing
 
 
 class ChatModel(Protocol):
@@ -81,7 +82,7 @@ class LiteLLMModel:
         import litellm
 
         litellm.suppress_debug_info = True  # errors are reported by describe_error, not banners
-        for _ in range(len(self._OPTIONAL) + 1):
+        for _ in range(len(self._OPTIONAL) + 4):
             # Decide from what *this* request sent: categories run in parallel, and another
             # thread may update `unsupported` while this request is in flight.
             kwargs = self._request(messages)
@@ -90,7 +91,12 @@ class LiteLLMModel:
                 response = litellm.completion(**kwargs)
                 break
             except litellm.BadRequestError as exc:  # ...and what it didn't know, we learn here
-                rejected = [p for p in self._OPTIONAL if p in kwargs and p in str(exc).lower()]
+                text = str(exc).lower()
+                if kwargs["max_tokens"] > 4096 and any(w in text for w in (
+                        "max_tokens", "max_completion_tokens", "maximum context length", "context window")):
+                    self.max_tokens = min(self.max_tokens, kwargs["max_tokens"] // 2)  # too big for this model
+                    continue
+                rejected = [p for p in self._OPTIONAL if p in kwargs and p in text]
                 if not rejected:
                     raise
                 self.unsupported.update(rejected)
@@ -98,11 +104,17 @@ class LiteLLMModel:
             raise RuntimeError(f"{self.model}: request rejected even without optional parameters")
         latency = time.perf_counter() - start
         usage = getattr(response, "usage", None)
+        choice = response.choices[0]
+        text = choice.message.content or ""
+        reasoning = getattr(choice.message, "reasoning_content", None) or ""
+        if "{" not in text and "{" in reasoning:  # some providers return the whole answer as "reasoning"
+            text = reasoning
         return ChatResult(
-            text=response.choices[0].message.content or "",
+            text=text,
             prompt_tokens=getattr(usage, "prompt_tokens", 0) or 0,
             completion_tokens=getattr(usage, "completion_tokens", 0) or 0,
             latency_s=latency,
+            finish_reason=getattr(choice, "finish_reason", "") or "",
         )
 
 
@@ -217,6 +229,12 @@ def complete_json(model: ChatModel, messages: list[dict], schema: type[T],
             span.set_attribute("kyb.attempt", attempt)
             reply = model.chat(convo)
             value, error = parse_json_output(reply.text, schema)
+            cut_off = reply.finish_reason == "length"
+            if value is None and cut_off:
+                limit = getattr(model, "max_tokens", None)
+                error = (f"output cut off at the {limit or 'max'}-token limit before the answer "
+                         f"(a reasoning model thinking too long); {error}")
+            span.set_attribute("kyb.finish_reason", reply.finish_reason)
             span.set_attribute("kyb.prompt_tokens", reply.prompt_tokens)
             span.set_attribute("kyb.completion_tokens", reply.completion_tokens)
             span.set_attribute("kyb.latency_s", reply.latency_s)
@@ -231,9 +249,14 @@ def complete_json(model: ChatModel, messages: list[dict], schema: type[T],
             result.value = value
             return result
         result.errors.append(error or "unknown error")
-        convo = convo + [
-            {"role": "assistant", "content": reply.text},
-            {"role": "user", "content": f"Your output could not be used ({error}). "
-                                        "Return only the corrected JSON object."},
-        ]
+        if cut_off:  # resending a cut-off essay wastes the budget again: ask again, briefly
+            convo = list(messages) + [{"role": "user", "content": (
+                "Your previous answer ran out of room before the JSON. Keep your reasoning short and "
+                "return only the JSON object.")}]
+        else:
+            convo = convo + [
+                {"role": "assistant", "content": reply.text},
+                {"role": "user", "content": f"Your output could not be used ({error}). "
+                                            "Return only the corrected JSON object."},
+            ]
     return result

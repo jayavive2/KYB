@@ -8,7 +8,7 @@
 # See https://docs.litellm.ai/docs/providers for the rest.
 #
 # Prices are USD per 1M tokens for the base flavor on Nebius Token Factory, copied from
-# https://tokenfactory.nebius.com/api/public/models_info on 2026-11-26.
+# https://tokenfactory.nebius.com/api/public/models_info (checked 2026-11-27).
 # The catalog changes: run `uv run kyb models` and check it before publishing results.
 # A model with no price here falls back to LiteLLM's price list; if that has none either,
 # its cost shows as "n/a".
@@ -17,22 +17,24 @@
 # What a screen uses unless you choose otherwise: a reasoning model plans, a cheaper model reads.
 # "fixed" instead of a model ID = the hand-written plan in src/kyb/plan.py.
 planner = "nebius/moonshotai/Kimi-K3.1-Pro"
+# The first champion reader; promotions from a reader eval replace it (config/champion.json).
 reader = "nebius/openai/gpt-oss-120b"
+# Other planners offered in the app's Screen tab.
+planners = ["nebius/moonshotai/Kimi-K3.1-Pro", "nebius/zai-org/GLM-5.3"]
 
 [eval]
-# Kept out of the reader list so it never grades its own output.
+# Checks every finding on each screen, and judges the reader eval. Kept out of the reader list so
+# it never grades its own output.
 judge = "nebius/deepseek-ai/DeepSeek-V4-Pro-0813"
-# Reasoning ("thinking") models to try as planners.
-planners = ["nebius/moonshotai/Kimi-K3.1-Pro", "nebius/zai-org/GLM-5.3"]
-# The planner held fixed in a reader sweep (`kyb eval readers`, the app's Dashboard).
-sweep_planner = "nebius/moonshotai/Kimi-K3.1-Pro"
-# Five readers across price tiers, most to least expensive.
+# The heavy hitters: the largest text models on Token Factory, from five labs (catalog checked
+# 2026-11-27). The app adds the champion to every comparison, so a challenger has to beat it.
+# The judge is kept out of this list so it never grades its own output.
 readers = [
-  "nebius/zai-org/GLM-5.3",
-  "nebius/MiniMaxAI/MiniMax-M3",
-  "nebius/nvidia/nemotron-3-super-120b-a12b",
-  "nebius/openai/gpt-oss-120b",
-  "nebius/Qwen/Qwen3-30B-A3B-Instruct-2507",
+  "nebius/moonshotai/Kimi-K3.1-Pro",            # 2.8T MoE, 104B active
+  "nebius/meta-models/muse-spark-open",         # 816B, about 42B active
+  "nebius/zai-org/GLM-5.3",                     # 750B MoE
+  "nebius/nvidia/Nemotron-3-Ultra-550b-a55b",   # 550B, 55B active
+  "nebius/MiniMaxAI/MiniMax-M3",                # 428B MoE
 ]
 
 [prices."nebius/moonshotai/Kimi-K3.1-Pro"]
@@ -66,3 +68,11 @@ output = 0.30
 [prices."nebius/deepseek-ai/DeepSeek-V4-Pro-0813"]
 input = 1.32
 output = 3.96
+
+[prices."nebius/meta-models/muse-spark-open"]
+input = 1.25
+output = 4.25
+
+[prices."nebius/nvidia/Nemotron-3-Ultra-550b-a55b"]
+input = 1.00
+output = 3.00
