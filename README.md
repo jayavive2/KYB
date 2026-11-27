@@ -24,7 +24,7 @@ is needed; it runs on any past screen.
 Screens and evals both read their traces for **trace analysis**: model calls, errors, JSON repairs,
 latency per call, tokens, Tavily latency and credits, and a timeline of where each screen's time went.
 
-See [TECHNICAL_STATEMENT.md](TECHNICAL_STATEMENT.md) for the reasoning and results.
+See [TechnicalStatement.pdf](TechnicalStatement.pdf) for the reasoning and results.
 
 ## How it works
 
