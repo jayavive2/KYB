@@ -9,15 +9,18 @@ can widen the date window, invent a URL, or skip a category.
 from __future__ import annotations
 
 import contextvars
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import date
+from typing import Any
 
 from openinference.instrumentation import using_attributes
 from openinference.semconv.trace import OpenInferenceSpanKindValues, SpanAttributes
+from pydantic import BaseModel
 
 from .evidence import EvidenceStore, render_sources
-from .llm import ChatModel, complete_json
+from .llm import ChatModel, complete_json, is_fatal
 from .plan import CATEGORIES, CATEGORY_BY_KEY, plan_version, window_start
 from .planner import FixedPlanner, Planner, PlanResult
 from .schema import (
@@ -56,10 +59,41 @@ Rules:
    settlements, penalties), resolved (closed or lifted), unknown.
 6. List sources you did not use in rejected_sources with a reason: different_entity,
    not_adverse, outside_window, or not_relevant.
-7. If nothing qualifies, return an empty findings list.
+7. event_date is as precise as the source: YYYY-MM-DD, YYYY-MM or YYYY. Never add a month or
+   day the source does not state.
+8. Amounts keep the currency the source uses (US$, C$, EUR). Do not convert currencies or add up
+   amounts from different sources unless a source states the total.
+9. If nothing qualifies, return an empty findings list.
 
 Return only a JSON object shaped like this example:
 {example}"""
+
+
+MERGE_PROMPT = """You check the findings of an adverse-media screen of {name} for duplicates.
+The findings were written separately for each risk category, so one real-world event (one
+penalty, plea, lawsuit, breach or departure) can appear more than once, worded differently.
+
+Group the IDs of findings that report the same event. Related but separate events are not
+duplicates: a guilty plea and a later sentencing, two different lawsuits, two different breaches.
+Leave out findings that have no duplicate.
+
+Return only JSON: {{"groups": [["regulatory-1", "financial_crime-2"]]}}"""
+
+
+class _Groups(BaseModel):
+    groups: list[list[str]] = []
+
+
+@dataclass
+class MergeRun:
+    """The reader's duplicate check: groups of finding IDs that report the same event."""
+
+    groups: list[list[str]] = field(default_factory=list)
+    attempts: int = 0
+    errors: list[str] = field(default_factory=list)
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    latency_s: float = 0.0
 
 
 @dataclass
@@ -110,6 +144,8 @@ class ScreenResult:
     categories: dict[str, CategoryRun] = field(default_factory=dict)
     wall_time_s: float = 0.0
     plan: PlanResult | None = None
+    merge: MergeRun | None = None
+    check: Any = None  # events.SourceCheck, when a source check ran
 
     @property
     def planner(self) -> str:
@@ -120,12 +156,18 @@ class ScreenResult:
         return [f for run in self.categories.values() for f in run.findings]
 
     @property
+    def duplicate_groups(self) -> list[list[str]]:
+        return self.merge.groups if self.merge else []
+
+    @property
     def prompt_tokens(self) -> int:
-        return sum(r.prompt_tokens for r in self.categories.values())
+        merge = self.merge.prompt_tokens if self.merge else 0
+        return sum(r.prompt_tokens for r in self.categories.values()) + merge
 
     @property
     def completion_tokens(self) -> int:
-        return sum(r.completion_tokens for r in self.categories.values())
+        merge = self.merge.completion_tokens if self.merge else 0
+        return sum(r.completion_tokens for r in self.categories.values()) + merge
 
 
 def build_messages(company: Company, as_of: date, lookback_years: int, category: str,
@@ -178,6 +220,8 @@ def extract_category(model: ChatModel, company: Company, as_of: date, lookback_y
             call = complete_json(model, messages, CategoryOutput)
         except Exception as exc:  # API failure: this category is "not assessed", the rest continue
             span.record_exception(exc)
+            if is_fatal(exc):  # out of credit, bad key, unknown model: every category would fail
+                raise
             run.errors.append(f"{type(exc).__name__}: {exc}")
             set_json(span, "kyb.errors", run.errors)
             return run
@@ -195,6 +239,47 @@ def extract_category(model: ChatModel, company: Company, as_of: date, lookback_y
         set_io(span, output_value=[f.as_dict() for f in run.findings])
         if run.errors:
             set_json(span, "kyb.errors", run.errors)
+    return run
+
+
+def clean_groups(groups: list[list[str]], known_ids: list[str]) -> list[list[str]]:
+    """Keep groups of two or more known IDs; an ID joins only the first group that names it."""
+    known, seen, out = set(known_ids), set(), []
+    for group in groups:
+        ids = [i for i in dict.fromkeys(group) if i in known and i not in seen]
+        if len(ids) >= 2:
+            out.append(ids)
+            seen.update(ids)
+    return out
+
+
+def merge_duplicates(model: ChatModel, company: Company, findings: list[ValidatedFinding]) -> MergeRun:
+    """Ask the reader which findings report the same event. Code checks the answer; the report
+    then shows each event once, under every category it belongs to."""
+    run = MergeRun()
+    if len(findings) < 2:
+        return run
+    with get_tracer().start_as_current_span("kyb.merge") as span:
+        span.set_attribute(SpanAttributes.OPENINFERENCE_SPAN_KIND, OpenInferenceSpanKindValues.CHAIN.value)
+        lines = [f"- {f.id} ({f.category}, {f.finding.event_date or 'date n/a'}, {f.finding.severity}, "
+                 f"cites {' '.join(f.finding.source_ids)}): {f.finding.summary}" for f in findings]
+        messages = [{"role": "system", "content": MERGE_PROMPT.format(name=company.name)},
+                    {"role": "user", "content": "Findings:\n" + "\n".join(lines)}]
+        try:
+            call = complete_json(model, messages, _Groups)
+        except Exception as exc:  # no merge is a worse report, not a failed screen
+            span.record_exception(exc)
+            if is_fatal(exc):
+                raise
+            run.errors.append(f"{type(exc).__name__}: {exc}")
+            return run
+        run.attempts, run.errors = call.attempts, call.errors
+        run.prompt_tokens, run.completion_tokens = call.prompt_tokens, call.completion_tokens
+        run.latency_s = call.latency_s
+        if call.value is not None:
+            run.groups = clean_groups(call.value.groups, [f.id for f in findings])
+        span.set_attribute("kyb.duplicate_groups", len(run.groups))
+        set_io(span, output_value=run.groups)
     return run
 
 
@@ -221,9 +306,11 @@ def _plan_step(company: Company, as_of: date, lookback_years: int, planner: Plan
 
 def run_screen(company: Company, as_of: date, lookback_years: int, backend: SearchBackend,
                model: ChatModel | None, session_id: str | None = None, max_workers: int = 4,
-               planner: Planner | None = None, recorded_plan: PlanResult | None = None) -> ScreenResult:
+               planner: Planner | None = None, recorded_plan: PlanResult | None = None,
+               search_workers: int = 6, checker: Callable[[ScreenResult], Any] | None = None) -> ScreenResult:
     """Plan, search, then read. `model=None` stops after searching (recording mode).
-    `recorded_plan` replays a plan instead of calling the planner (the default is the fixed plan)."""
+    `recorded_plan` replays a plan instead of calling the planner (the default is the fixed plan).
+    `checker` (the source check) runs on the findings inside the same trace; its result is `result.check`."""
     import time
 
     started = time.perf_counter()
@@ -245,10 +332,15 @@ def run_screen(company: Company, as_of: date, lookback_years: int, backend: Sear
         set_io(root, input_value=company.model_dump(exclude_none=True))
 
         plan = _plan_step(company, as_of, lookback_years, planner, recorded_plan)
+        # Searches are independent, so they run in parallel. Results are added to the evidence in
+        # plan order, so source IDs (S1, S2, ...) don't depend on which search returned first.
+        with ThreadPoolExecutor(max_workers=search_workers) as pool:
+            pending = [pool.submit(contextvars.copy_context().run, traced_search, backend,
+                                   planned.category, planned.params) for planned in plan.searches]
+            responses = [f.result() for f in pending]
         evidence = EvidenceStore()
         searches: list[SearchLog] = []
-        for planned in plan.searches:
-            response = traced_search(backend, planned.category, planned.params)
+        for planned, response in zip(plan.searches, responses, strict=True):
             evidence.add_response(planned.category, response)
             searches.append(SearchLog(planned.category, planned.params["query"],
                                       planned.params.get("include_domains", []),
@@ -269,6 +361,9 @@ def run_screen(company: Company, as_of: date, lookback_years: int, backend: Sear
                     for c in CATEGORIES
                 }
                 result.categories = {key: f.result() for key, f in futures.items()}
+            result.merge = merge_duplicates(model, company, result.findings)
+            if checker is not None and result.findings:
+                result.check = checker(result)
 
         root.set_attribute("kyb.source_count", len(evidence))
         root.set_attribute("kyb.finding_count", len(result.findings))

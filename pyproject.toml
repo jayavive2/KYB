@@ -14,10 +14,11 @@ dependencies = [
     "typer>=0.12.0",
     "opentelemetry-sdk>=1.30.0",
     "opentelemetry-exporter-otlp-proto-http>=1.30.0",
-    "openinference-instrumentation-openai>=0.1.30",
     "openinference-semantic-conventions>=0.1.20",
     "streamlit>=1.50",
     "plotly>=5.24",
+    "litellm>=1.111.0",
+    "openinference-instrumentation-litellm>=0.1.61",
 ]
 
 [project.scripts]
@@ -36,6 +37,7 @@ packages = ["src/kyb"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["tests"]
+filterwarnings = ["ignore:.*ReadOnly.*:UserWarning"]  # from LiteLLM's pydantic types
 
 [tool.ruff]
 line-length = 120

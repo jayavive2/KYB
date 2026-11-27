@@ -1,8 +1,11 @@
-"""OpenAI-compatible chat client (Nebius Token Factory by default) with JSON validation.
+"""Chat models through LiteLLM, with JSON validation.
 
-We call the OpenAI SDK directly rather than through an agent framework: this is a
-measurement harness, and we want the exact request, the exact token counts from the
-provider, and nothing in between.
+A model is named by its LiteLLM string, so switching provider is a config edit:
+`nebius/<Token Factory model ID>`, `openai/gpt-4.1-mini`, `anthropic/claude-haiku-4-5`,
+`gemini/gemini-2.5-flash`, ... Each provider reads its usual key (NEBIUS_API_KEY,
+OPENAI_API_KEY, ANTHROPIC_API_KEY, ...). We call `litellm.completion` directly rather than
+through an agent framework: this is a measurement harness, and we want the exact request
+and the provider's own token counts.
 """
 
 from __future__ import annotations
@@ -16,7 +19,10 @@ from typing import Protocol, TypeVar
 
 from pydantic import BaseModel, ValidationError
 
-DEFAULT_BASE_URL = "https://api.tokenfactory.nebius.com/v1/"
+# Use LiteLLM's bundled price map instead of fetching it from GitHub on import.
+os.environ.setdefault("LITELLM_LOCAL_MODEL_COST_MAP", "True")
+
+NEBIUS_BASE_URL = "https://api.tokenfactory.nebius.com/v1/"
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -35,26 +41,24 @@ class ChatModel(Protocol):
     def chat(self, messages: list[dict]) -> ChatResult: ...
 
 
-class OpenAICompatibleModel:
-    """Chat model behind an OpenAI-compatible endpoint. Asks for JSON mode at temperature 0;
-    if a model rejects either parameter, it stops sending it (the JSON is still validated)."""
+class LiteLLMModel:
+    """Any chat model LiteLLM supports. Asks for JSON mode at temperature 0; if a model rejects
+    either parameter, it stops sending it (the JSON is still validated)."""
 
     # Optional request parameters, dropped for a model that rejects them.
     _OPTIONAL = ("response_format", "temperature")
 
-    def __init__(self, model: str, base_url: str | None = None, api_key: str | None = None,
-                 temperature: float = 0.0, max_tokens: int = 8192) -> None:
-        from openai import OpenAI
-
+    def __init__(self, model: str, max_tokens: int = 8192, temperature: float = 0.0,
+                 api_base: str | None = None, api_key: str | None = None) -> None:
         self.model = model
-        self.temperature = temperature
         self.max_tokens = max_tokens
+        self.temperature = temperature
+        # LiteLLM still defaults nebius/ to the old AI Studio host; send Token Factory's.
+        if api_base is None and model.startswith("nebius/"):
+            api_base = os.getenv("NEBIUS_API_BASE") or os.getenv("NEBIUS_BASE_URL") or NEBIUS_BASE_URL
+        self.api_base = api_base
+        self.api_key = api_key
         self.unsupported: set[str] = set()
-        self._client = OpenAI(
-            base_url=base_url or os.getenv("NEBIUS_BASE_URL", DEFAULT_BASE_URL),
-            api_key=api_key or os.environ["NEBIUS_API_KEY"],
-            max_retries=3,
-        )
 
     @property
     def json_mode(self) -> bool:
@@ -62,23 +66,30 @@ class OpenAICompatibleModel:
 
     def _request(self, messages: list[dict]) -> dict:
         kwargs: dict = {"model": self.model, "messages": messages, "max_tokens": self.max_tokens,
-                        "response_format": {"type": "json_object"}, "temperature": self.temperature}
+                        "response_format": {"type": "json_object"}, "temperature": self.temperature,
+                        "drop_params": True,  # LiteLLM drops what it knows a provider doesn't take
+                        "max_retries": 3}     # rate limits and 5xx only
         for name in self.unsupported:
             kwargs.pop(name, None)
+        if self.api_base:
+            kwargs["api_base"] = self.api_base
+        if self.api_key:
+            kwargs["api_key"] = self.api_key
         return kwargs
 
     def chat(self, messages: list[dict]) -> ChatResult:
-        from openai import BadRequestError
+        import litellm
 
+        litellm.suppress_debug_info = True  # errors are reported by describe_error, not banners
         for _ in range(len(self._OPTIONAL) + 1):
             # Decide from what *this* request sent: categories run in parallel, and another
             # thread may update `unsupported` while this request is in flight.
             kwargs = self._request(messages)
             start = time.perf_counter()
             try:
-                response = self._client.chat.completions.create(**kwargs)
+                response = litellm.completion(**kwargs)
                 break
-            except BadRequestError as exc:
+            except litellm.BadRequestError as exc:  # ...and what it didn't know, we learn here
                 rejected = [p for p in self._OPTIONAL if p in kwargs and p in str(exc).lower()]
                 if not rejected:
                     raise
@@ -86,13 +97,73 @@ class OpenAICompatibleModel:
         else:
             raise RuntimeError(f"{self.model}: request rejected even without optional parameters")
         latency = time.perf_counter() - start
-        usage = response.usage
+        usage = getattr(response, "usage", None)
         return ChatResult(
             text=response.choices[0].message.content or "",
             prompt_tokens=getattr(usage, "prompt_tokens", 0) or 0,
             completion_tokens=getattr(usage, "completion_tokens", 0) or 0,
             latency_s=latency,
         )
+
+
+def missing_keys(model_ids: list[str]) -> dict[str, list[str]]:
+    """Env vars each model's provider needs but doesn't have, per LiteLLM."""
+    import litellm
+
+    out: dict[str, list[str]] = {}
+    for m in dict.fromkeys(model_ids):
+        if not m or m == "fixed":
+            continue
+        try:
+            missing = litellm.validate_environment(m).get("missing_keys") or []
+        except Exception:  # unknown provider: describe_error explains it when the call fails
+            missing = []
+        if missing:
+            out[m] = missing
+    return out
+
+
+def is_fatal(exc: BaseException) -> bool:
+    """Errors that will fail every call to this model (credit, key, model name): stop, don't retry
+    category by category."""
+    if type(exc).__module__.startswith("tavily"):  # bad key, no credits, forbidden: every search fails
+        return type(exc).__name__ in ("InvalidAPIKeyError", "MissingAPIKeyError", "UsageLimitExceededError",
+                                      "ForbiddenError")
+    status = getattr(exc, "status_code", None)
+    text = str(exc).lower()
+    return status in (401, 402, 403, 404) or any(w in text for w in (
+        "payment required", "exhausted your budget", "insufficient_quota", "llm provider not provided",
+        "model not found", "does not exist"))
+
+
+def describe_error(exc: BaseException, model: str | None = None) -> str:
+    """One line a person can act on, for the app and the CLI."""
+    name = type(exc).__name__
+    if type(exc).__module__.startswith("tavily"):
+        if name in ("InvalidAPIKeyError", "MissingAPIKeyError"):
+            return ("Tavily rejected TAVILY_API_KEY. Check the value (it starts with tvly-, no quotes or "
+                    "spaces); a Codespaces secret overrides .env.")
+        if name == "UsageLimitExceededError":
+            return "Tavily: this key is out of credits for the month. Add credits at app.tavily.com."
+        return f"Tavily: {name}: {str(exc).strip()[:300]}"
+    status = getattr(exc, "status_code", None)
+    text = str(exc)
+    low = text.lower()
+    model = model or getattr(exc, "model", None) or "the model"
+    if status == 402 or "payment required" in low or "budget" in low or "insufficient_quota" in low:
+        return (f"{model}: the provider account is out of credit (402 Payment Required). Top up "
+                "(Nebius: Top up in the Token Factory console) or switch to another provider's model "
+                "in config/models.toml.")
+    if status == 401 or "authentication" in low:
+        return f"{model}: the API key was rejected or is missing. Check the provider's key (e.g. NEBIUS_API_KEY)."
+    if "llm provider not provided" in low:
+        return (f"'{model}' is not a LiteLLM model string. Prefix the provider: nebius/<Token Factory ID>, "
+                "openai/<model>, anthropic/<model>, ...")
+    if status == 404 or "not found" in low or "does not exist" in low:
+        return (f"{model}: model not found. `uv run kyb models` lists Nebius models (use them as "
+                "nebius/<id>).")
+    first = text.strip().splitlines()[0] if text.strip() else ""
+    return f"{type(exc).__name__}: {first[:300]}"
 
 
 _THINK = re.compile(r"<think>.*?</think>", re.DOTALL | re.IGNORECASE)

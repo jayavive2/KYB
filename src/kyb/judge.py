@@ -18,10 +18,11 @@ import yaml
 from openinference.semconv.trace import OpenInferenceSpanKindValues, SpanAttributes
 from pydantic import BaseModel, Field
 
+from .events import SourceCheck, build_events
 from .evidence import EvidenceStore, render_sources
-from .llm import ChatModel, JsonCallResult, complete_json
+from .llm import ChatModel, JsonCallResult, complete_json, describe_error
 from .plan import window_start
-from .schema import Company
+from .schema import Company, Judgment
 from .screen import ScreenResult
 from .tracing import get_tracer, set_io
 
@@ -37,7 +38,7 @@ def judge_call(judge: ChatModel, name: str, system: str, user: str, schema) -> J
                                          {"role": "user", "content": user}], schema)
         except Exception as exc:  # a judge outage shouldn't discard the candidates' runs
             span.record_exception(exc)
-            call = JsonCallResult(value=None, attempts=0, errors=[f"{type(exc).__name__}: {exc}"])
+            call = JsonCallResult(value=None, attempts=0, errors=[describe_error(exc, judge.model)])
         if call.value is None:
             JUDGE_FAILURES.append(f"{name}: {call.errors[-1] if call.errors else 'no output'}")
         set_io(span, output_value=call.value.model_dump() if call.value else {"errors": call.errors})
@@ -45,19 +46,22 @@ def judge_call(judge: ChatModel, name: str, system: str, user: str, schema) -> J
 
 
 def report_for_judge(result: ScreenResult, excerpt_chars: int = 400) -> str:
-    """A report as the judge sees it: each finding with short excerpts of its cited sources."""
+    """A report as the judge sees it: each event (duplicates merged, as in the report) with short
+    excerpts of its cited sources."""
     failed = [k for k, run in result.categories.items() if not run.parsed]
     note = f"\n\nCategories not assessed (the author's output was unusable): {', '.join(failed)}" if failed else ""
-    if not result.findings:
+    events, _ = build_events(result)
+    if not events:
         return "(no findings)" + note
     blocks = []
-    for f in result.findings:
-        lines = [f"[{f.id}] ({f.category}; {f.finding.severity}; {f.finding.status}; "
-                 f"{f.finding.event_date or 'date n/a'}) {f.finding.summary}"]
-        for sid in f.finding.source_ids:
+    for e in events:
+        f = e.lead.finding
+        lines = [f"[{e.lead.id}] ({', '.join(e.categories)}; {f.severity}; {f.status}; "
+                 f"{f.event_date or 'date n/a'}) {f.summary}"]
+        for sid, category in e.citations:
             s = result.evidence.get(sid)
             if s:
-                text = s.text(f.category)
+                text = s.text(category)
                 text = text[:excerpt_chars] + ("…" if len(text) > excerpt_chars else "")
                 lines.append(f"    {sid}: {s.title} ({s.published_date or 'date unknown'}) — {text}")
         blocks.append("\n".join(lines))
@@ -88,13 +92,6 @@ class _Match(BaseModel):
 
 class _Matches(BaseModel):
     matches: list[_Match]
-
-
-class Judgment(BaseModel):
-    finding_id: str
-    about_target: bool
-    supported: bool
-    reason: str = ""
 
 
 class _Judgments(BaseModel):
@@ -168,23 +165,45 @@ def judge_recall(judge: ChatModel, events, result: ScreenResult) -> dict[str, st
 
 
 def judge_support(judge: ChatModel, company: Company, result: ScreenResult,
-                  batch_size: int = 8) -> dict[str, Judgment]:
-    out: dict[str, Judgment] = {}
+                  batch_size: int = 8, workers: int = 4) -> dict[str, Judgment]:
+    import contextvars
+    from concurrent.futures import ThreadPoolExecutor
+
     findings = result.findings
     system = SUPPORT_PROMPT.format(identity=company.identity_block())
-    for i in range(0, len(findings), batch_size):
+
+    def batch(chunk) -> list[Judgment]:
         blocks = []
-        for f in findings[i : i + batch_size]:
+        for f in chunk:
             cited = [result.evidence.get(sid) for sid in f.finding.source_ids]
             blocks.append(
                 f"Finding {f.id} ({f.category}, {f.finding.event_date or 'date n/a'}): {f.finding.summary}\n"
                 f"Cited sources:\n{render_sources([c for c in cited if c], f.category)}"
             )
         call = judge_call(judge, "support", system, "\n\n---\n\n".join(blocks), _Judgments)
-        if call.value:
-            for j in call.value.judgments:
-                out[j.finding_id] = j
-    return out
+        known = {f.id for f in chunk}
+        return [j for j in call.value.judgments if j.finding_id in known] if call.value else []
+
+    chunks = [findings[i : i + batch_size] for i in range(0, len(findings), batch_size)]
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        done = [pool.submit(contextvars.copy_context().run, batch, c) for c in chunks]
+        return {j.finding_id: j for f in done for j in f.result()}
+
+
+def check_sources(judge: ChatModel, result: ScreenResult) -> SourceCheck:
+    """The support check on a single screen: every finding against the sources it cites.
+    Findings it can't confirm are held back from the report, not deleted."""
+    before = len(JUDGE_FAILURES)
+    with get_tracer().start_as_current_span("kyb.check") as span:
+        span.set_attribute(SpanAttributes.OPENINFERENCE_SPAN_KIND,
+                           OpenInferenceSpanKindValues.EVALUATOR.value)
+        check = SourceCheck(judge.model, judge_support(judge, result.company, result))
+        check.errors = JUDGE_FAILURES[before:]
+        verdicts = [check.confirmed(f.id) for f in result.findings]
+        span.set_attribute("kyb.confirmed", verdicts.count(True))
+        span.set_attribute("kyb.held_back", verdicts.count(False))
+        span.set_attribute("kyb.unchecked", verdicts.count(None))
+    return check
 
 
 # ---------------------------------------------------------------- rubric

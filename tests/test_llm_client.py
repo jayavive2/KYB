@@ -1,5 +1,5 @@
-"""Exercise the real OpenAI SDK path (and its OpenInference instrumentation) against a
-local mock of an OpenAI-compatible endpoint."""
+"""Exercise the real LiteLLM path (and its OpenInference instrumentation) against a local mock
+of an OpenAI-compatible endpoint."""
 
 import json
 import threading
@@ -9,7 +9,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import pytest
 from fakes import FakeTavily
 
-from kyb.llm import OpenAICompatibleModel
+from kyb.llm import LiteLLMModel
 from kyb.schema import Company
 from kyb.screen import run_screen
 from kyb.tracing import init_tracing, shutdown_tracing
@@ -19,6 +19,7 @@ class _Handler(BaseHTTPRequestHandler):
     reject_json_mode = False
     reject_temperature = False
     fail_category: str | None = None
+    out_of_credit = False
     requests: list[dict] = []
 
     def log_message(self, *args):
@@ -27,6 +28,10 @@ class _Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         type(self).requests.append(body)
+        if self.out_of_credit:  # what Nebius returns when the balance runs out
+            self._send(402, {"detail": "Payment Required: You have exhausted your budget. "
+                                       "Please add funds to continue using the API."})
+            return
         if self.reject_json_mode and "response_format" in body:
             self._send(400, {"error": {"message": "response_format is not supported for this model"}})
             return
@@ -63,6 +68,7 @@ def server(monkeypatch):
     _Handler.requests = []
     _Handler.reject_json_mode = _Handler.reject_temperature = False
     _Handler.fail_category = None
+    _Handler.out_of_credit = False
     srv = HTTPServer(("127.0.0.1", 0), _Handler)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     yield f"http://127.0.0.1:{srv.server_port}/v1/"
@@ -72,7 +78,7 @@ def server(monkeypatch):
 @pytest.mark.parametrize("reject", [False, True])
 def test_real_client_tokens_and_llm_spans(tmp_path, server, reject):
     _Handler.reject_json_mode = _Handler.reject_temperature = reject
-    model = OpenAICompatibleModel("mock/model", base_url=server, api_key="test")
+    model = LiteLLMModel("openai/mock-model", api_base=server, api_key="test")
     trace = tmp_path / "trace.jsonl"
     init_tracing(trace)
     try:
@@ -81,7 +87,8 @@ def test_real_client_tokens_and_llm_spans(tmp_path, server, reject):
     finally:
         shutdown_tracing()
 
-    assert result.prompt_tokens == 1234 * 7 and result.completion_tokens == 56 * 7
+    calls = 7 + 1                                                # 7 categories + the duplicate check
+    assert result.prompt_tokens == 1234 * calls and result.completion_tokens == 56 * calls
     assert all(r.parsed and r.first_try for r in result.categories.values())
     assert model.json_mode is (not reject)
     assert model.unsupported == ({"response_format", "temperature"} if reject else set())
@@ -92,14 +99,15 @@ def test_real_client_tokens_and_llm_spans(tmp_path, server, reject):
     by_id = {s["context"]["span_id"]: s for s in spans}
     llm_all = [s for s in spans if s["attributes"].get("openinference.span.kind") == "LLM"]
     llm = [s for s in llm_all if s["status"]["status_code"] != "ERROR"]
-    assert len(llm) == 7
+    assert len(llm) == calls
     # Rejected JSON-mode requests are traced as errors, not hidden.
-    assert (len(llm_all) > 7) is reject
+    assert (len(llm_all) > calls) is reject
     for s in llm:
         assert s["attributes"]["llm.token_count.prompt"] == 1234
         call = by_id[s["parent_id"]]                                # our provider-independent call span
         assert call["name"] == "kyb.llm.call" and call["attributes"]["kyb.prompt_tokens"] == 1234
-        assert by_id[call["parent_id"]]["name"].startswith("kyb.extract.")  # context crossed threads
+        step = by_id[call["parent_id"]]["name"]
+        assert step.startswith("kyb.extract.") or step == "kyb.merge"  # context crossed threads
         assert s["attributes"]["session.id"] == "test-session"
         assert json.loads(s["attributes"]["metadata"])["company"] == "Acme Corp"
 
@@ -108,7 +116,7 @@ def test_api_failure_marks_only_that_category(tmp_path, server):
     from kyb.report import render_markdown
 
     _Handler.fail_category = "Risk category: Sanctions and export controls"
-    model = OpenAICompatibleModel("mock/model", base_url=server, api_key="test")
+    model = LiteLLMModel("openai/mock-model", api_base=server, api_key="test")
     init_tracing(tmp_path / "trace.jsonl")
     try:
         result = run_screen(Company(name="Acme Corp"), date(2026, 1, 15), 5, FakeTavily(), model)
@@ -118,3 +126,49 @@ def test_api_failure_marks_only_that_category(tmp_path, server):
     assert failed == ["sanctions"]
     assert "BadRequestError" in result.categories["sanctions"].errors[0]
     assert "**Not assessed:** the model call failed" in render_markdown(result)
+
+
+def test_out_of_credit_stops_the_screen_with_a_clear_message(tmp_path, server):
+    from kyb.llm import describe_error, is_fatal
+
+    _Handler.out_of_credit = True
+    model = LiteLLMModel("openai/mock-model", api_base=server, api_key="test")
+    init_tracing(tmp_path / "trace.jsonl")
+    try:
+        with pytest.raises(Exception) as info:
+            run_screen(Company(name="Acme Corp"), date(2026, 1, 15), 5, FakeTavily(), model)
+    finally:
+        shutdown_tracing()
+    assert is_fatal(info.value)
+    assert "out of credit" in describe_error(info.value, model.model)
+    assert len(_Handler.requests) <= 4 + 3  # stopped early: not 7 categories x retries
+
+
+def test_describe_error_names_the_fix():
+    from kyb.llm import describe_error
+
+    class Fake(Exception):
+        def __init__(self, msg, status):
+            super().__init__(msg)
+            self.status_code = status
+
+    assert "API key" in describe_error(Fake("Unauthorized", 401), "nebius/x")
+    assert "kyb models" in describe_error(Fake("The model does not exist", 404), "nebius/x")
+    assert "LiteLLM model string" in describe_error(Exception("LLM Provider NOT provided. Pass in ..."), "x/y")
+
+
+def test_nebius_models_go_to_token_factory(monkeypatch):
+    monkeypatch.delenv("NEBIUS_API_BASE", raising=False)
+    monkeypatch.delenv("NEBIUS_BASE_URL", raising=False)
+    assert LiteLLMModel("nebius/openai/gpt-oss-120b").api_base == "https://api.tokenfactory.nebius.com/v1/"
+    assert LiteLLMModel("openai/gpt-4.1-mini").api_base is None   # other providers: LiteLLM's default
+
+
+def test_tavily_key_errors_are_one_line():
+    from tavily.errors import InvalidAPIKeyError, UsageLimitExceededError
+
+    from kyb.llm import describe_error, is_fatal
+
+    assert is_fatal(InvalidAPIKeyError("Unauthorized"))
+    assert "TAVILY_API_KEY" in describe_error(InvalidAPIKeyError("Unauthorized: missing or invalid API key."))
+    assert "out of credits" in describe_error(UsageLimitExceededError("limit"))

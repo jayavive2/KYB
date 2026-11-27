@@ -14,7 +14,7 @@ import os
 from pathlib import Path
 from typing import IO, Any
 
-from openinference.instrumentation.openai import OpenAIInstrumentor
+from openinference.instrumentation.litellm import LiteLLMInstrumentor
 from openinference.semconv.resource import ResourceAttributes
 from openinference.semconv.trace import SpanAttributes
 from opentelemetry import trace
@@ -58,7 +58,7 @@ def init_tracing(trace_path: Path) -> TracerProvider:
 
         provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
 
-    OpenAIInstrumentor().instrument(tracer_provider=provider)
+    LiteLLMInstrumentor().instrument(tracer_provider=provider)
     _provider = provider
     return provider
 
@@ -68,7 +68,7 @@ def shutdown_tracing() -> None:
     if _provider is not None:
         _provider.force_flush()
         _provider.shutdown()
-        OpenAIInstrumentor().uninstrument()
+        LiteLLMInstrumentor().uninstrument()
         _provider = None
     if _trace_file is not None:
         _trace_file.close()

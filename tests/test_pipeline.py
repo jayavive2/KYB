@@ -2,11 +2,11 @@ import json
 from datetime import date
 
 import pytest
-from fakes import FakeModel, FakeTavily
+from fakes import FakeJudge, FakeModel, FakeTavily
 
 from kyb.evidence import EvidenceStore, normalize_url
 from kyb.llm import complete_json, parse_json_output
-from kyb.plan import CATEGORIES, build_plan, plan_version
+from kyb.plan import CATEGORIES, EXCLUDED_DOMAINS, build_plan, plan_version
 from kyb.report import render_markdown
 from kyb.schema import CategoryOutput, Company
 from kyb.screen import run_screen
@@ -143,3 +143,93 @@ def test_repair_retry_and_not_assessed(tmp_path):
     report = render_markdown(result)
     assert report.count("Not assessed") == len(CATEGORIES)
     assert "No adverse findings" not in report
+
+
+def test_open_web_searches_skip_social_media():
+    plan = build_plan(ACME, AS_OF, 5)
+    for p in plan:
+        if p.params.get("include_domains"):           # regulator-only searches name their sites
+            assert "exclude_domains" not in p.params
+        else:
+            assert p.params["exclude_domains"] == list(EXCLUDED_DOMAINS)
+    assert "facebook.com" in EXCLUDED_DOMAINS
+
+
+def test_parallel_search_keeps_source_ids_in_plan_order(tmp_path):
+    import random
+    import time
+
+    class Jittery(FakeTavily):
+        def search(self, params):
+            time.sleep(random.uniform(0, 0.03))      # finish in a random order
+            return super().search(params)
+
+    runs = []
+    for _ in range(3):
+        init_tracing(tmp_path / "t.jsonl")
+        try:
+            runs.append(run_screen(ACME, AS_OF, 5, Jittery(), None))
+        finally:
+            shutdown_tracing()
+    ids = [[(s.id, s.url) for s in r.evidence.all()] for r in runs]
+    assert ids[0] == ids[1] == ids[2]
+    sequential = EvidenceStore()
+    tavily = FakeTavily()
+    for p in build_plan(ACME, AS_OF, 5):
+        sequential.add_response(p.category, tavily.search(p.params))
+    assert ids[0] == [(s.id, s.url) for s in sequential.all()]
+
+
+def test_duplicates_merge_into_one_event_listed_under_each_category(tmp_path):
+    from kyb.events import build_events
+    from kyb.report import to_json
+    from kyb.screen import clean_groups
+
+    result, _ = _live(tmp_path, FakeModel())     # every category reports the same $5M fine
+    assert len(result.duplicate_groups) == 1 and len(result.duplicate_groups[0]) == 7  # made-up IDs dropped
+    events, held = build_events(result)
+    assert len(events) == 1 and not held and len(events[0].categories) == 7
+    report = render_markdown(result)
+    assert report.count("Regulator fined Acme Corp $5 million.") == 7      # once in full, 6 cross-references
+    assert report.count("- Also here:") == 6 and "Findings merged because they reported the same event" in report
+    assert to_json(result)["events"][0]["members"] == result.duplicate_groups[0]
+
+    assert clean_groups([["a", "b", "zz"], ["b", "c"], ["c", "d"], ["e"]], ["a", "b", "c", "d", "e"]) == [
+        ["a", "b"], ["c", "d"]]                   # unknown IDs out, each ID in one group, no singletons
+
+
+def test_source_check_holds_back_unconfirmed_findings(tmp_path):
+    from kyb.events import build_events
+    from kyb.judge import check_sources
+    from kyb.report import to_json
+
+    result, _ = _live(tmp_path, FakeModel())
+    check = check_sources(FakeJudge(), result)      # the fake confirms only the first finding of each batch
+    assert [check.confirmed(f.id) for f in result.findings] == [True] + [False] * 6
+    # All seven are one event: the confirmed one carries it, under every category, and nothing is held back.
+    events, held = build_events(result, check)
+    assert len(events) == 1 and len(events[0].members) == 1 and len(events[0].categories) == 7 and not held
+
+    result.merge.groups = []                       # without the merge, the six unconfirmed are held back
+    events, held = build_events(result, check)
+    assert len(events) == 1 and len(held) == 6
+    report = render_markdown(result, check)
+    assert "## Held back" in report and "1 confirmed, 6 not confirmed, 0 not checked; 6 held back" in report
+    assert to_json(result, check)["source_check"]["held_back"] == 6
+
+
+def test_a_failed_source_check_hides_nothing(tmp_path):
+    from kyb.events import build_events
+    from kyb.judge import check_sources
+
+    class Down:
+        model = "judge/down"
+
+        def chat(self, messages):
+            raise RuntimeError("judge unavailable")
+
+    result, _ = _live(tmp_path, FakeModel())
+    check = check_sources(Down(), result)
+    events, held = build_events(result, check)
+    assert not held and len(events) == 1 and check.errors
+    assert "0 confirmed, 0 not confirmed, 7 not checked; 0 held back" in render_markdown(result, check)

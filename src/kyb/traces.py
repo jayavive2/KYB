@@ -55,7 +55,7 @@ def _role(parent: str | None) -> str:
         return "other"
     if parent == "kyb.plan":
         return "planner"
-    if parent.startswith("kyb.extract."):
+    if parent.startswith("kyb.extract.") or parent == "kyb.merge":
         return "reader"
     if parent.startswith("kyb.judge."):
         return "judge"
@@ -127,9 +127,9 @@ def stage_of(name: str) -> str | None:
         return "plan"
     if name == "tavily.search":
         return "search"
-    if name.startswith("kyb.extract."):
+    if name.startswith("kyb.extract.") or name == "kyb.merge":
         return "read"
-    if name.startswith("kyb.judge."):
+    if name.startswith("kyb.judge.") or name == "kyb.check":
         return "judge"
     return None
 
@@ -168,6 +168,10 @@ def waterfall(spans: pd.DataFrame, trace_id: str, mode: str = "light") -> go.Fig
                 f" · attempt {a['kyb.attempt']}" if a.get("kyb.attempt", 1) > 1 else "")
         elif stage == "search":
             label = f"search · {r['attrs'].get('kyb.category', '')}"
+        elif r["name"] == "kyb.merge":
+            label = "merge duplicates"
+        elif r["name"] == "kyb.check":
+            label = "source check"
         elif stage == "read":
             label = f"read · {r['name'].removeprefix('kyb.extract.')}"
         elif stage in ("plan", "judge"):

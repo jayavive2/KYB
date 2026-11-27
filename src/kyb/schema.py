@@ -57,6 +57,15 @@ class RejectedSource(BaseModel):
     _norm = field_validator("reason", mode="before")(_lower)
 
 
+class Judgment(BaseModel):
+    """The source check's verdict on one finding."""
+
+    finding_id: str
+    about_target: bool
+    supported: bool
+    reason: str = ""
+
+
 class CategoryOutput(BaseModel):
     findings: list[Finding] = Field(default_factory=list)
     rejected_sources: list[RejectedSource] = Field(default_factory=list)

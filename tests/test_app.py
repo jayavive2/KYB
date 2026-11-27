@@ -52,6 +52,10 @@ def test_screen_shows_trace_then_compares_readers(tmp_path, monkeypatch):
     _screen(at, "Acme Corp")
     assert any("Screened **Acme Corp**" in s.value for s in at.success)
     assert "Search time" in _text(at) and "Read time" in _text(at)              # trace view of the screen
+    assert "Source check time" in _text(at)
+    assert "Confirmed by sources" in _text(at) and "Distinct events" in _text(at)
+    saved = json.loads(next(Path("runs").glob("*-Acme_Corp/findings.json")).read_text())
+    assert saved["source_check"]["model"] == "fake/judge" and saved["events"]   # the fake factory's judge
     assert at.multiselect(key="compare_readers").value == ["m/a", "m/bad"]
 
     at.button(key="compare_run").click().run()                  # the screen stays on the page across reruns
@@ -113,6 +117,27 @@ def test_runs_are_blocked_without_keys(tmp_path, monkeypatch):
     _setup(tmp_path, monkeypatch)
     monkeypatch.delenv("NEBIUS_API_KEY")
     at = _app()
+    at.text_input(key="judge").input("nebius/some-judge").run()   # LiteLLM: nebius/... needs NEBIUS_API_KEY
     at.checkbox(key="search_allow_record").check().run()
     assert at.button(key="search_run").disabled
     assert any("NEBIUS_API_KEY" in e.value for e in at.error)
+
+
+def test_a_failed_screen_shows_one_actionable_line(tmp_path, monkeypatch):
+    from tavily.errors import InvalidAPIKeyError
+
+    class BadKey:
+        mode = "live"
+
+        def search(self, params):
+            raise InvalidAPIKeyError("Unauthorized: missing or invalid API key.")
+
+    _setup(tmp_path, monkeypatch, dataset=False)
+    monkeypatch.setattr(factory, "make_search_backend", BadKey)
+    at = _app()
+    at.text_input(key="screen_name").input("Acme Corp")
+    at.button(key="screen_submit").click().run()
+    assert any("Tavily rejected TAVILY_API_KEY" in e.value for e in at.error)
+    # The traceback is still there, folded into "Details", and the page kept rendering.
+    assert [str(x.message) for x in at.exception] == ["Unauthorized: missing or invalid API key."]
+    assert at.button(key="screen_submit") is not None and "screen_dir" not in at.session_state

@@ -29,6 +29,22 @@ BASE_PARAMS: dict = {
 
 CREDITS_PER_SEARCH = 2  # Tavily charges 2 credits for an `advanced` search
 
+# Social platforms: posts repeat or speculate on news, and a reader can't tell a rumor from a
+# report. Left out of open-web searches; the news they echo is still found at its source.
+EXCLUDED_DOMAINS: tuple[str, ...] = (
+    "facebook.com",
+    "instagram.com",
+    "x.com",
+    "twitter.com",
+    "tiktok.com",
+    "linkedin.com",
+    "reddit.com",
+    "youtube.com",
+    "pinterest.com",
+    "threads.net",
+    "quora.com",
+)
+
 # Primary sources for enforcement actions. Searched in addition to the open web so a
 # regulator's own press release is in the evidence when it exists.
 REGULATOR_DOMAINS: tuple[str, ...] = (
@@ -142,6 +158,8 @@ def make_search(category: str, query: str, start: date, *, topic: str = "general
     params.update(query=query, topic=topic, exact_match=exact_match, start_date=start.isoformat())
     if include_domains:
         params["include_domains"] = list(include_domains)
+    else:
+        params["exclude_domains"] = list(EXCLUDED_DOMAINS)
     return PlannedSearch(category, params)
 
 
@@ -158,6 +176,7 @@ def plan_version() -> str:
     """Fingerprint of the plan definition, stored in every trace so replay can refuse a mismatch."""
     payload = {
         "base": BASE_PARAMS,
+        "excluded": list(EXCLUDED_DOMAINS),
         "categories": [
             [c.key, [[q.template, list(q.include_domains)] for q in c.queries]] for c in CATEGORIES
         ],

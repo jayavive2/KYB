@@ -23,6 +23,9 @@
   },
   "customizations": {
     "codespaces": { "openFiles": ["README.md"] },
-    "vscode": { "extensions": ["ms-python.python"] }
+    "vscode": {
+      "extensions": ["ms-python.python"],
+      "settings": { "python.terminal.activateEnvironment": false }
+    }
   }
 }

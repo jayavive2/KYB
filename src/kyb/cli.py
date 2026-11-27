@@ -27,7 +27,7 @@ from rich.table import Table
 from . import evaluate as ev
 from . import factory
 from .judge import load_rubric
-from .llm import DEFAULT_BASE_URL
+from .llm import NEBIUS_BASE_URL
 from .plan import CATEGORIES, plan_version
 from .planner import FIXED, make_planner
 from .report import render_markdown, to_json
@@ -79,6 +79,27 @@ def _require_nebius() -> None:
     _require("NEBIUS_API_KEY", "Create one at https://tokenfactory.nebius.com and put it in .env")
 
 
+def _fail(exc: Exception) -> None:
+    """Credit, key and model-name errors get one actionable line; anything else, the traceback."""
+    from .llm import describe_error, is_fatal
+
+    if not is_fatal(exc):
+        raise exc
+    console.print(f"[bold red]{describe_error(exc)}[/bold red]")
+    raise typer.Exit(1) from exc
+
+
+def _require_keys(*model_ids: str) -> None:
+    """Each model's provider key, per LiteLLM (nebius/... needs NEBIUS_API_KEY, openai/... OPENAI_API_KEY)."""
+    from .llm import missing_keys
+
+    missing = missing_keys([m for m in model_ids if m and m != FIXED])
+    if missing:
+        for model, keys in missing.items():
+            console.print(f"[bold red]Missing {', '.join(keys)}[/bold red] for {model}. Put it in .env.")
+        raise typer.Exit(1)
+
+
 def _stamp() -> str:
     return datetime.now().strftime("%Y%m%d-%H%M%S")
 
@@ -99,6 +120,15 @@ def _print_result(result: ScreenResult, run_dir: Path) -> None:
             table.add_row(cat.title, str(sum(s.category == cat.key for s in result.searches)),
                           str(len(run.findings)) if run.parsed else "—", str(len(run.source_ids)), note)
         console.print(table)
+        from .events import build_events
+
+        events, held = build_events(result, result.check)
+        line = f"{len(events)} distinct events from {len(result.findings)} findings"
+        if result.check is not None:
+            verdicts = [result.check.confirmed(f.id) for f in result.findings]
+            line += (f" · source check: {verdicts.count(True)} confirmed, {len(held)} held back, "
+                     f"{verdicts.count(None)} not checked")
+        console.print(line)
         console.print(f"Reader tokens: {result.prompt_tokens:,} in / {result.completion_tokens:,} out · "
                       f"{result.wall_time_s:.1f}s")
     else:
@@ -106,6 +136,13 @@ def _print_result(result: ScreenResult, run_dir: Path) -> None:
     if result.plan and result.plan.fixes:
         console.print(f"[yellow]Plan fixes:[/yellow] {'; '.join(result.plan.fixes)}")
     console.print(f"Report: {run_dir / 'report.md'}\nTrace:  {run_dir / 'trace.jsonl'}")
+
+
+def _checker(judge_id: str):
+    from .judge import check_sources
+
+    judge = factory.make_model(judge_id, "judge")
+    return lambda result: check_sources(judge, result)
 
 
 def _write_outputs(result: ScreenResult, run_dir: Path) -> None:
@@ -127,13 +164,16 @@ def screen(
     as_of: Annotated[Optional[str], typer.Option(help="Screen date YYYY-MM-DD (default today)")] = None,
     search_only: Annotated[bool, typer.Option(help="Plan and search, no reader")] = False,
     out: Annotated[Path, typer.Option(help="Parent folder for run output")] = Path("runs"),
+    check: Annotated[bool, typer.Option(help="Check every finding against its cited sources")] = True,
+    judge: Annotated[Optional[str], typer.Option(help="Model for the source check")] = None,
 ) -> None:
     """Screen a company live and write a cited report plus a replayable trace."""
     planner = planner or _default("planner", FIXED)
-    reader = reader or _default("reader", "openai/gpt-oss-120b")
+    reader = reader or _default("reader", "nebius/openai/gpt-oss-120b")
+    check = check and not search_only
+    judge_id = judge or _config().get("eval", {}).get("judge", reader)
     _require_tavily()
-    if not search_only or planner != FIXED:
-        _require_nebius()
+    _require_keys(planner, None if search_only else reader, judge_id if check else None)
     company = Company(name=name, aliases=alias or [], country=country, website=website,
                       industry=industry, notes=notes)
     run_dir = out / f"{_stamp()}-{ev.slug(name)}"
@@ -142,7 +182,10 @@ def screen(
         result = run_screen(
             company, date.fromisoformat(as_of) if as_of else date.today(), lookback_years,
             factory.make_search_backend(), None if search_only else factory.make_model(reader, "reader"),
-            planner=make_planner(planner, factory.make_model), session_id=run_dir.name)
+            planner=make_planner(planner, factory.make_model), session_id=run_dir.name,
+            checker=_checker(judge_id) if check else None)
+    except Exception as exc:
+        _fail(exc)
     finally:
         shutdown_tracing()
     _write_outputs(result, run_dir)
@@ -158,8 +201,8 @@ def replay(
     out: Annotated[Optional[Path], typer.Option(help="Output folder")] = None,
 ) -> None:
     """Re-run a recorded screen with another reader: same plan, same evidence, no Tavily calls."""
-    reader = reader or _default("reader", "openai/gpt-oss-120b")
-    _require_nebius()
+    reader = reader or _default("reader", "nebius/openai/gpt-oss-120b")
+    _require_keys(reader)
     recording = load_recording(trace)
     if recording.plan is None and recording.plan_version != plan_version():
         console.print("[yellow]The fixed plan changed since this was recorded; "
@@ -170,6 +213,8 @@ def replay(
         result = run_screen(recording.company, recording.as_of, recording.lookback_years,
                             ReplayBackend(recording), factory.make_model(reader, "reader"),
                             recorded_plan=recording.plan, session_id=run_dir.name)
+    except Exception as exc:
+        _fail(exc)
     finally:
         shutdown_tracing()
     _write_outputs(result, run_dir)
@@ -185,10 +230,10 @@ def compare(
     answer_key: Annotated[Optional[Path], typer.Option(help="Known events, matched by company name")] = DATASET,
 ) -> None:
     """Reader eval on past screens: plan and search results held constant, readers swapped, rubric-judged."""
-    _require_nebius()
     cfg = _config()
     judge_id = judge or cfg["eval"]["judge"]
     reader_ids = _ids(readers) or cfg["eval"]["readers"]
+    _require_keys(judge_id, *reader_ids)
     if judge_id in reader_ids:
         console.print("[yellow]The judge is also a reader; it will grade its own output.[/yellow]")
     names = {load_recording(t).company.name for t in traces}
@@ -203,14 +248,17 @@ def compare(
 
 @app.command()
 def models() -> None:
-    """List the models available to your NEBIUS_API_KEY (or NEBIUS_BASE_URL endpoint)."""
+    """List the Nebius Token Factory models your NEBIUS_API_KEY can use, as LiteLLM model strings."""
     _require_nebius()
     from openai import OpenAI
 
-    client = OpenAI(base_url=os.getenv("NEBIUS_BASE_URL", DEFAULT_BASE_URL), api_key=os.environ["NEBIUS_API_KEY"])
+    client = OpenAI(base_url=os.getenv("NEBIUS_BASE_URL", NEBIUS_BASE_URL), api_key=os.environ["NEBIUS_API_KEY"])
     priced = _config().get("prices", {})
     for m in sorted(client.models.list(), key=lambda m: m.id):
-        console.print(f"{m.id}{'  (priced in config)' if m.id in priced else ''}")
+        name = f"nebius/{m.id}"
+        console.print(f"{name}{'  (priced in config)' if name in priced else ''}")
+    console.print("Other providers work too, with their own key: openai/<model> (OPENAI_API_KEY), "
+                  "anthropic/<model> (ANTHROPIC_API_KEY), ... See docs.litellm.ai/docs/providers.")
 
 
 def _record_missing(dataset: ev.Dataset, planners: list[str], case_ids: list[str] | None, allowed: bool) -> None:
@@ -256,8 +304,7 @@ def eval_record(
 ) -> None:
     """Plan and search live, once per company. Experiments then replay these recordings."""
     _require_tavily()
-    if planner != FIXED:
-        _require_nebius()
+    _require_keys(planner)
     data = ev.load_dataset(dataset)
     ev.record(data, planner, RECORDINGS, factory.make_search_backend, factory.make_model,
               cases=data.select(_ids(cases)), force=force, log=console.print)
@@ -272,9 +319,9 @@ def eval_readers(
     rubric: bool = True, pairwise: bool = True, record_missing: RecordOpt = False,
 ) -> None:
     """Eval 2: swap the reader. The planner and its recorded search results stay fixed."""
-    _require_nebius()
     ids = _ids(readers) or _config()["eval"]["readers"]
     planner = planner or _config()["eval"].get("sweep_planner", FIXED)
+    _require_keys(planner, _config()["eval"]["judge"] if judge is None else judge, *ids)
     _record_missing(ev.load_dataset(dataset), [planner], _ids(cases), record_missing)
     _run("readers", ev.readers_experiment(planner, ids), dataset, judge, _ids(cases), rubric, pairwise)
 
@@ -287,9 +334,9 @@ def eval_search(
     record_missing: RecordOpt = False,
 ) -> None:
     """Eval 1: did search find the known events in the companies file? No reader runs."""
-    _require_nebius()
     cfg = _config()
     ids = _ids(planners) or [FIXED] + cfg["eval"]["planners"]
+    _require_keys(judge or cfg["eval"]["judge"], *ids)
     data = ev.load_dataset(dataset)
     _record_missing(data, ids, _ids(cases), record_missing)
     out_dir = Path("results") / f"{_stamp()}-search"

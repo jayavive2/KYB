@@ -1,12 +1,19 @@
 # KYB screening on Tavily + Nebius, with a two-part eval harness
 
-A vendor-risk / KYB (know-your-business) screener. Give it a company, and it runs three stages:
+A vendor-risk / KYB (know-your-business) screener. Give it a company, and it runs four stages:
 
 1. **Planner**: a reasoning ("thinking") model on Nebius Token Factory, or the hand-written fixed
    plan, chooses the Tavily searches.
-2. **Tavily search** runs them.
+2. **Tavily search** runs them in parallel, skipping social media.
 3. **Reader**: a second model reads the results per risk category and returns findings that cite
-   source IDs. Code renders the report, so every citation links to a source that was actually retrieved.
+   source IDs, then groups findings that report the same event so each event appears once.
+4. **Source check**: a judge model reads each finding's cited sources and confirms the finding or
+   holds it back. Code renders the report, so every citation links to a source that was actually
+   retrieved, and every finding in it was confirmed against those sources.
+
+Models are called through [LiteLLM](https://docs.litellm.ai/docs/providers), so switching provider is
+a config edit: Nebius Token Factory models are `nebius/<model ID>`, and `openai/...`,
+`anthropic/...`, `gemini/...` work the same way with their own key.
 
 Every run is traced with OpenTelemetry, and **the trace doubles as a recording**: it stores the plan
 and the full Tavily responses. That makes two separate evals possible, one per half of the pipeline:
@@ -30,19 +37,24 @@ company ─► PLANNER  reasoning model writing queries per risk category (or th
              │       code builds the Tavily params: exact_match, advanced depth + chunks_per_source,
              │       the date window, regulator-only domains; budget ≤3 per category, ≤12 total
              ▼
-           TAVILY SEARCH ─► evidence store: deduped by URL, stable IDs S1…Sn
+           TAVILY SEARCH  in parallel, social media excluded
+             │       ─► evidence store: deduped by URL, stable IDs S1…Sn in plan order
              │                    ▲
              │                    └── eval 1: are the known events in here?
              ▼
            READER   one call per category ─► JSON findings citing source IDs
              │       (schema-validated, one repair retry, unknown IDs removed)
+             │       then one call grouping duplicates; code validates the groups
              │                    ▲
              │                    └── eval 2: same evidence, other readers, rubric judge
              ▼
-           report rendered by code; a category the reader failed on is "not assessed", never "clean"
+           SOURCE CHECK  judge reads each finding's cited sources: confirmed, or held back
+             ▼
+           report rendered by code: one entry per event, held-back findings listed separately,
+           a category the reader failed on is "not assessed", never "clean"
 
 trace.jsonl (OpenTelemetry, OpenInference conventions; also to Phoenix, Langfuse or any OTLP backend)
-  kyb.plan · tavily.search (full responses) · kyb.extract.* · kyb.llm.call · kyb.judge.*
+  kyb.plan · tavily.search (full responses) · kyb.extract.* · kyb.merge · kyb.check · kyb.llm.call · kyb.judge.*
 ```
 
 ## Run it in GitHub Codespaces
@@ -76,6 +88,12 @@ cp .env.example .env            # add TAVILY_API_KEY and NEBIUS_API_KEY
 uv run kyb models               # models your key can use; edit config/models.toml to match
 uv run streamlit run app.py
 ```
+
+To use another provider for any role, put its LiteLLM model string in `config/models.toml` (for
+example `reader = "openai/gpt-4.1-mini"` or a reader list mixing `nebius/...` and
+`anthropic/...` models) and add that provider's key (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, ...) to
+`.env`. The sidebar shows which provider keys are present. Costs come from `config/models.toml` and
+fall back to LiteLLM's price list for models not priced there.
 
 The app has four tabs:
 
@@ -160,12 +178,12 @@ The **dashboard** shows how the readers trade quality, cost and latency: weight 
 ranking by the blended score, parallel coordinates across every measure, quality against cost and
 against latency with the Pareto frontier (readers nobody beats on both), rubric and per-company
 heatmaps, and a runs table grouped by layer. By default the sweep runs five readers across price
-tiers: `zai-org/GLM-5.3`, `MiniMaxAI/MiniMax-M3`, `nvidia/nemotron-3-super-120b-a12b`,
-`openai/gpt-oss-120b` and `Qwen/Qwen3-30B-A3B-Instruct-2507`.
+tiers, all on Nebius: `GLM-5.3`, `MiniMax-M3`, `nemotron-3-super-120b-a12b`, `gpt-oss-120b` and
+`Qwen3-30B-A3B-Instruct-2507`.
 
 ## Trace analysis
 
-Every model call is a `kyb.llm.call` span whatever the provider, alongside the OpenInference LLM
+Every model call is a `kyb.llm.call` span whatever the provider, alongside the OpenInference LiteLLM
 span, and every search a `tavily.search` span. From the trace alone, each run reports:
 
 - **per model and role (planner, reader, judge):** calls, errors, JSON repairs, unusable output,
@@ -197,10 +215,18 @@ _Filled in from `results/<run>/summary.md` after running the evals._
   enforces the budget, and fills any category a planner skips from the fixed plan.
 - **The reader reads; code writes.** The reader returns findings that cite source IDs; code
   validates them and renders the report. No model can produce a URL that wasn't retrieved.
+- **Check, then show.** A valid citation ID only proves the source exists. On every screen a judge
+  model reads each finding's cited sources; findings it can't confirm move to a "Held back" section
+  instead of disappearing, so a reviewer sees both. If the check itself fails, nothing is hidden
+  and the report says the findings weren't checked. Costs one judge call per eight findings.
+- **Duplicates are merged, not avoided.** Reading per category keeps each prompt focused, but one
+  event (a guilty plea with regulatory penalties) lands in several categories. One extra reader call
+  groups them; code accepts only groups of known IDs and lists the event under each category.
 - **The answer key is optional.** The rubric judges any screen against its own evidence; known
   events add a check against what actually happened.
-- **OpenAI SDK directly, no agent framework.** Exact requests and provider-reported token counts,
-  plus a provider-independent span per model call for the trace analysis.
+- **LiteLLM's `completion` directly, no agent framework.** Any provider by config, exact requests
+  and provider-reported token counts, plus a provider-independent span per model call for the trace
+  analysis. JSON mode is requested and dropped per model if rejected; the output is validated either way.
 
 ## Limitations
 
@@ -222,9 +248,10 @@ src/kyb/plan.py        fixed plan, categories, Tavily parameter builder
 src/kyb/planner.py     fixed and model planners, plan validation and budget
 src/kyb/search.py      live Tavily backend, recordings, replay backend, traced search span
 src/kyb/evidence.py    evidence store and model-facing rendering
-src/kyb/screen.py      pipeline: plan, search, read; citation validation
-src/kyb/llm.py         OpenAI-compatible client, JSON parsing and repair, per-call span
-src/kyb/judge.py       coverage, recall, support, rubric and pairwise judges
+src/kyb/screen.py      pipeline: plan, parallel search, read, merge; citation validation
+src/kyb/llm.py         LiteLLM model, JSON parsing and repair, per-call span, readable errors
+src/kyb/judge.py       coverage, recall, support (and the per-screen source check), rubric, pairwise
+src/kyb/events.py      findings into events: duplicates merged, unconfirmed findings held back
 src/kyb/evaluate.py    eval 1 (search_eval), eval 2 (run_experiment, compare_screens), summaries
 src/kyb/traces.py      trace analysis: model calls, search stats, stage timeline
 src/kyb/dashboard.py   sweep data, Pareto frontier, blended score, Plotly figures
@@ -235,7 +262,7 @@ src/kyb/cli.py         `kyb` command
 evals/companies.yaml   answer key: known events per company, with references
 config/models.toml     default planner and reader, planners, readers, judge, prices
 config/rubric.yaml     rubric criteria and weights
-tests/                 offline tests: fake Tavily, fake models, mock OpenAI endpoint, Streamlit AppTest
+tests/                 offline tests: fake Tavily, fake models, LiteLLM against a mock endpoint, AppTest
 .devcontainer/         GitHub Codespaces: Python 3.12, uv, key secrets, app on port 8501
 .streamlit/config.toml app theme (light and dark), shared with the chart palette
 ```

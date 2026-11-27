@@ -2,6 +2,7 @@ import csv
 import json
 from pathlib import Path
 
+import pytest
 import yaml
 from fakes import FakeJudge, FakeModel, FakePlannerModel, FakeTavily
 from typer.testing import CliRunner
@@ -69,7 +70,8 @@ def test_readers_experiment(tmp_path):
     assert rows["m/bad"]["rubric_citation"] == "n/a"            # no findings: only scope applies
     assert rows["m/bad"]["rubric_scope"] == "3.00" and rows["m/bad"]["quality"] == "3.00"
     metrics = {m["arm"]: m for m in json.loads((out / "metrics.json").read_text())}
-    assert metrics["m/a"]["cost_usd_per_company"] == (7000 / 1e6 * 1.0 + 1400 / 1e6 * 2.0)
+    # 7 category calls (1000 in, 200 out each) + the merge call (300 in, 30 out)
+    assert metrics["m/a"]["cost_usd_per_company"] == pytest.approx(7300 / 1e6 * 1.0 + 1430 / 1e6 * 2.0)
     assert metrics["m/bad"]["cost_usd_per_company"] is None and metrics["m/a"]["json_first_try"] == 1.0
     assert rows["m/a"]["tavily_credits"] == "32"               # 2 companies x 8 searches x 2
     assert rows["m/a"]["planner_usd_per_company"] == "0.0000"  # fixed plan costs nothing

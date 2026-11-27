@@ -27,8 +27,8 @@ def test_llm_call_stats_by_role(tmp_path):
     stats = T.llm_stats(calls).set_index("role")
     assert stats.loc["planner", "calls"] == 1 and stats.loc["planner", "mean_completion_tokens"] == 1500
     reader = stats.loc["reader"]
-    assert reader["calls"] == 14                    # 7 categories, each repaired once
-    assert reader["json_repairs"] == 7 and reader["unusable_output"] == 7
+    assert reader["calls"] == 16                    # 7 categories + the merge step, each repaired once
+    assert reader["json_repairs"] == 8 and reader["unusable_output"] == 8
     assert reader["errors"] == 0 and reader["p50_latency_s"] > 0
 
 

@@ -55,6 +55,12 @@ class FakeModel:
         self.calls.append(messages)
         if self.always_bad or (self.bad_first and len(messages) == 2):
             return ChatResult("Sure! Here are the findings: none", 100, 10, 0.01)
+        if "for duplicates" in messages[0]["content"]:   # the merge step: group identical summaries
+            by_summary: dict[str, list[str]] = {}
+            for fid, summary in re.findall(r"^- (\S+) \(.*?\): (.*)$", messages[-1]["content"], re.M):
+                by_summary.setdefault(summary, []).append(fid)
+            groups = [ids for ids in by_summary.values() if len(ids) > 1] + [["made-up-1", "made-up-2"]]
+            return ChatResult(json.dumps({"groups": groups}), 300, 30, 0.02)
         ids = re.findall(r"^\[(S\d+)\]", messages[1]["content"], re.M)
         payload = {
             "findings": [

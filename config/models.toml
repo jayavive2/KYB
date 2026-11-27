@@ -1,60 +1,68 @@
 # Models for the CLI and the Streamlit app, and their prices.
 #
+# Every model is a LiteLLM model string, so any provider LiteLLM supports works:
+#   nebius/<Token Factory ID>   NEBIUS_API_KEY      (`uv run kyb models` lists them)
+#   openai/gpt-4.1-mini         OPENAI_API_KEY
+#   anthropic/claude-haiku-4-5  ANTHROPIC_API_KEY
+#   gemini/gemini-2.5-flash     GEMINI_API_KEY
+# See https://docs.litellm.ai/docs/providers for the rest.
+#
 # Prices are USD per 1M tokens for the base flavor on Nebius Token Factory, copied from
 # https://tokenfactory.nebius.com/api/public/models_info on 2026-11-26.
 # The catalog changes: run `uv run kyb models` and check it before publishing results.
-# A model with no price here still runs; its cost shows as "n/a".
+# A model with no price here falls back to LiteLLM's price list; if that has none either,
+# its cost shows as "n/a".
 
 [defaults]
 # What a screen uses unless you choose otherwise: a reasoning model plans, a cheaper model reads.
 # "fixed" instead of a model ID = the hand-written plan in src/kyb/plan.py.
-planner = "moonshotai/Kimi-K3.1-Pro"
-reader = "openai/gpt-oss-120b"
+planner = "nebius/moonshotai/Kimi-K3.1-Pro"
+reader = "nebius/openai/gpt-oss-120b"
 
 [eval]
 # Kept out of the reader list so it never grades its own output.
-judge = "deepseek-ai/DeepSeek-V4-Pro-0813"
+judge = "nebius/deepseek-ai/DeepSeek-V4-Pro-0813"
 # Reasoning ("thinking") models to try as planners.
-planners = ["moonshotai/Kimi-K3.1-Pro", "zai-org/GLM-5.3"]
+planners = ["nebius/moonshotai/Kimi-K3.1-Pro", "nebius/zai-org/GLM-5.3"]
 # The planner held fixed in a reader sweep (`kyb eval readers`, the app's Dashboard).
-sweep_planner = "moonshotai/Kimi-K3.1-Pro"
+sweep_planner = "nebius/moonshotai/Kimi-K3.1-Pro"
 # Five readers across price tiers, most to least expensive.
 readers = [
-  "zai-org/GLM-5.3",
-  "MiniMaxAI/MiniMax-M3",
-  "nvidia/nemotron-3-super-120b-a12b",
-  "openai/gpt-oss-120b",
-  "Qwen/Qwen3-30B-A3B-Instruct-2507",
+  "nebius/zai-org/GLM-5.3",
+  "nebius/MiniMaxAI/MiniMax-M3",
+  "nebius/nvidia/nemotron-3-super-120b-a12b",
+  "nebius/openai/gpt-oss-120b",
+  "nebius/Qwen/Qwen3-30B-A3B-Instruct-2507",
 ]
 
-[prices."moonshotai/Kimi-K3.1-Pro"]
+[prices."nebius/moonshotai/Kimi-K3.1-Pro"]
 input = 2.00
 output = 10.00
 
-[prices."zai-org/GLM-5.3"]
+[prices."nebius/zai-org/GLM-5.3"]
 input = 1.40
 output = 4.40
 
-[prices."MiniMaxAI/MiniMax-M3"]
+[prices."nebius/MiniMaxAI/MiniMax-M3"]
 input = 0.30
 output = 1.20
 
-[prices."zai-org/GLM-5.3-Flash"]
+[prices."nebius/zai-org/GLM-5.3-Flash"]
 input = 0.15
 output = 0.50
 
-[prices."openai/gpt-oss-120b"]
+[prices."nebius/openai/gpt-oss-120b"]
 input = 0.15
 output = 0.60
 
-[prices."nvidia/nemotron-3-super-120b-a12b"]
+[prices."nebius/nvidia/nemotron-3-super-120b-a12b"]
 input = 0.30
 output = 0.90
 
-[prices."Qwen/Qwen3-30B-A3B-Instruct-2507"]
+[prices."nebius/Qwen/Qwen3-30B-A3B-Instruct-2507"]
 input = 0.10
 output = 0.30
 
-[prices."deepseek-ai/DeepSeek-V4-Pro-0813"]
+[prices."nebius/deepseek-ai/DeepSeek-V4-Pro-0813"]
 input = 1.32
 output = 3.96

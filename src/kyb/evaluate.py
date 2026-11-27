@@ -25,7 +25,7 @@ import pandas as pd
 import yaml
 
 from . import judge as J
-from .llm import ChatModel
+from .llm import ChatModel, describe_error
 from .plan import CATEGORIES, CREDITS_PER_SEARCH
 from .planner import FIXED, MAX_TOTAL, make_planner
 from .report import render_markdown, to_json
@@ -85,10 +85,21 @@ def load_config(path: Path) -> dict:
 
 
 def cost_usd(prices: dict, model: str, prompt_tokens: int, completion_tokens: int) -> float | None:
+    """From config/models.toml; for a model not priced there, LiteLLM's own price list."""
     p = prices.get(model)
-    if not p:
+    if p:
+        return prompt_tokens / 1e6 * p["input"] + completion_tokens / 1e6 * p["output"]
+    if not model or model == FIXED or "/" not in model:
         return None
-    return prompt_tokens / 1e6 * p["input"] + completion_tokens / 1e6 * p["output"]
+    try:
+        import litellm
+
+        litellm.suppress_debug_info = True
+        prompt_cost, completion_cost = litellm.cost_per_token(
+            model=model, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens)
+    except Exception:  # not in LiteLLM's list either
+        return None
+    return prompt_cost + completion_cost
 
 
 def slug(text: str) -> str:
@@ -267,7 +278,7 @@ def run_experiment(dataset: Dataset, kind: str, arms: list[Arm], *, model_factor
                     result = run_screen(case.company, rec.as_of, rec.lookback_years, ReplayBackend(rec),
                                         readers[arm.reader], recorded_plan=rec.plan, session_id=session)
                 except Exception as exc:  # one broken arm shouldn't sink the comparison
-                    log(f"  failed: {exc}")
+                    log(f"  failed: {describe_error(exc, arm.reader)}")
                     t.errors += 1
                     continue
                 results[arm] = result
