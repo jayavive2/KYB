@@ -1,0 +1,7 @@
+arm,planner,reader,cases_completed,sources_per_company,findings,events,supported_on_target,namesake_errors,unsupported,unjudged,invalid_citations,json_first_try,categories_failed,quality,rubric_citation,rubric_scope,rubric_relevance,rubric_specificity,rubric_calibration,pairwise_w_t_l,reader_usd_per_company,reader_sec_per_company,input_tokens,output_tokens,run_errors
+nebius/moonshotai/Kimi-K3.1-Pro,nebius/moonshotai/Kimi-K3.1-Pro,nebius/moonshotai/Kimi-K3.1-Pro,1,57.0,26,23,96%,1,0,0,0,100%,0,3.60,2.00,5.00,4.00,4.00,3.00,0-0-0,0.5264,120.7,38433,44955,0
+nebius/meta-models/muse-spark-open,nebius/moonshotai/Kimi-K3.1-Pro,nebius/meta-models/muse-spark-open,1,57.0,24,22,92%,0,2,0,0,100%,0,3.60,2.00,5.00,4.00,4.00,3.00,0-0-0,0.1835,72.0,38342,31891,0
+nebius/zai-org/GLM-5.3,nebius/moonshotai/Kimi-K3.1-Pro,nebius/zai-org/GLM-5.3,1,57.0,31,26,100%,0,0,0,0,86%,0,3.75,2.00,5.00,4.00,5.00,3.00,0-0-0,0.6238,405.5,42087,128392,0
+nebius/nvidia/Nemotron-3-Ultra-550b-a55b,nebius/moonshotai/Kimi-K3.1-Pro,nebius/nvidia/Nemotron-3-Ultra-550b-a55b,1,57.0,34,26,94%,0,2,0,0,100%,0,3.50,2.00,4.00,4.00,5.00,3.00,0-0-0,0.1308,37.4,40605,30077,0
+nebius/MiniMaxAI/MiniMax-M3,nebius/moonshotai/Kimi-K3.1-Pro,nebius/MiniMaxAI/MiniMax-M3,1,57.0,31,18,97%,0,1,0,0,100%,0,3.15,2.00,4.00,3.00,4.00,3.00,0-0-0,0.0170,8.1,38183,4593,0
+nebius/openai/gpt-oss-120b,nebius/moonshotai/Kimi-K3.1-Pro,nebius/openai/gpt-oss-120b,1,57.0,31,28,94%,0,2,0,0,86%,0,3.15,2.00,4.00,3.00,4.00,3.00,0-0-0,0.0146,16.3,44745,13145,0

@@ -1,0 +1,30 @@
+{
+  "reader": "nebius/MiniMaxAI/MiniMax-M3",
+  "history": [
+    {
+      "reader": "nebius/MiniMaxAI/MiniMax-M3",
+      "replaced": "nebius/openai/gpt-oss-120b",
+      "promoted_at": "2026-11-27T07:16:08",
+      "run": "results/20261127-070229-readers",
+      "weights": {
+        "quality": 0.6,
+        "cost": 0.25,
+        "latency": 0.15
+      },
+      "scores": {
+        "nebius/MiniMaxAI/MiniMax-M3": {
+          "composite": 0.687611395986208,
+          "quality": 3.15,
+          "cost_usd_per_company": 0.0169665,
+          "latency_s_per_company": 8.12371225700008
+        },
+        "nebius/openai/gpt-oss-120b": {
+          "composite": 0.6470546782742532,
+          "quality": 3.15,
+          "cost_usd_per_company": 0.01459875,
+          "latency_s_per_company": 16.34447182599979
+        }
+      }
+    }
+  ]
+}

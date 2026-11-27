@@ -1,0 +1,1509 @@
+{
+  "company": {
+    "name": "TD Bank",
+    "aliases": []
+  },
+  "as_of": "2026-11-27",
+  "lookback_years": 5,
+  "mode": "replay",
+  "planner": "nebius/moonshotai/Kimi-K3.1-Pro",
+  "plan_fixes": [],
+  "model": "nebius/moonshotai/Kimi-K3.1-Pro",
+  "searches": [
+    {
+      "category": "regulatory",
+      "query": "\"TD Bank\" consent order civil money penalty enforcement action",
+      "regulator_sites_only": true,
+      "results": 8
+    },
+    {
+      "category": "regulatory",
+      "query": "\"Toronto-Dominion Bank\" enforcement action penalty",
+      "regulator_sites_only": true,
+      "results": 8
+    },
+    {
+      "category": "regulatory",
+      "query": "\"TD Bank\" asset cap independent monitor OCC",
+      "regulator_sites_only": false,
+      "results": 6
+    },
+    {
+      "category": "litigation",
+      "query": "\"TD Bank\" class action lawsuit court ruling",
+      "regulator_sites_only": false,
+      "results": 8
+    },
+    {
+      "category": "litigation",
+      "query": "\"Toronto-Dominion Bank\" securities class action lawsuit",
+      "regulator_sites_only": false,
+      "results": 8
+    },
+    {
+      "category": "financial_crime",
+      "query": "\"TD Bank\" money laundering guilty plea criminal resolution",
+      "regulator_sites_only": true,
+      "results": 8
+    },
+    {
+      "category": "financial_crime",
+      "query": "\"TD Bank\" fraud money laundering bribery corruption investigation",
+      "regulator_sites_only": false,
+      "results": 3
+    },
+    {
+      "category": "sanctions",
+      "query": "\"TD Bank\" OFAC sanctions violation export controls",
+      "regulator_sites_only": true,
+      "results": 8
+    },
+    {
+      "category": "data_breach",
+      "query": "\"TD Bank\" data breach cyberattack ransomware security incident",
+      "regulator_sites_only": false,
+      "results": 8
+    },
+    {
+      "category": "financial_distress",
+      "query": "\"TD Bank\" layoffs restructuring default going concern",
+      "regulator_sites_only": false,
+      "results": 3
+    },
+    {
+      "category": "leadership",
+      "query": "\"TD Bank\" executive misconduct governance failure whistleblower",
+      "regulator_sites_only": false,
+      "results": 6
+    }
+  ],
+  "trace_id": "fca6362f7d031b442ef1a48e2b8574fb",
+  "findings": [
+    {
+      "id": "regulatory-1",
+      "category": "regulatory",
+      "summary": "TD Bank, N.A. and TD Bank USA, N.A. entered a coordinated U.S. BSA/AML resolution: FinCEN imposed a $1.3 billion civil money penalty, the OCC assessed $450 million and imposed a cease-and-desist order with an asset cap/growth and business restrictions, and the Federal Reserve fined parent Toronto-Dominion Bank $123.5 million; TD reported total payments of approximately US$3.09 billion across the OCC, Federal Reserve, FinCEN and DOJ. TD Bank, N.A. agreed to plead guilty to a criminal violation of 18 U.S.C. \u00a7371 and TD Bank US Holding Company to criminal violations of 31 U.S.C. \u00a7\u00a75322 and 5324, with approximately $1.89 billion payable to DOJ; the DOJ filing described repeated AML transaction-monitoring deficiencies, and the resolution requires remediation and independent compliance review.",
+      "event_date": "2024-10-10",
+      "severity": "high",
+      "status": "confirmed",
+      "source_ids": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6",
+        "S9",
+        "S11",
+        "S13"
+      ]
+    },
+    {
+      "id": "regulatory-2",
+      "category": "regulatory",
+      "summary": "The CFPB ordered TD Bank to pay $7.76 million in consumer redress and a $20 million civil money penalty for repeatedly furnishing inaccurate negative information to consumer reporting companies, including systemic errors concerning credit-card delinquencies and bankruptcies.",
+      "event_date": "2024-09-11",
+      "severity": "medium",
+      "status": "confirmed",
+      "source_ids": [
+        "S7"
+      ]
+    },
+    {
+      "id": "regulatory-3",
+      "category": "regulatory",
+      "summary": "The CFTC ordered The Toronto Dominion Bank (TD Bank), a swap dealer, to pay a US$75 million civil monetary penalty, cease and desist, and undertake remediation for recordkeeping and supervision failures involving firm-wide use of unapproved communication methods, including personal text messages; TD Bank admitted the facts in the order.",
+      "event_date": "2024-08-14",
+      "severity": "high",
+      "status": "confirmed",
+      "source_ids": [
+        "S8",
+        "S10"
+      ]
+    },
+    {
+      "id": "regulatory-4",
+      "category": "regulatory",
+      "summary": "The CFTC ordered The Toronto Dominion Bank (TD Bank) to pay a $4 million civil monetary penalty and cease and desist over supervision failures that caused it not to surveil certain communications for hundreds of swap-dealer personnel over a five-year period; TD Bank admitted the facts and acknowledged violations of the Commodity Exchange Act and CFTC regulations.",
+      "event_date": "2024-08-14",
+      "severity": "medium",
+      "status": "confirmed",
+      "source_ids": [
+        "S12"
+      ]
+    },
+    {
+      "id": "litigation-1",
+      "category": "litigation",
+      "summary": "In 2024, U.S. regulators imposed US$3.09 billion in monetary penalties on TD Bank's U.S. subsidiaries, along with business restrictions and an asset cap on TD Bank's U.S. retail banking growth. TD was reported to have pleaded guilty to multiple charges related to AML-program failures, and its subsidiaries to conspiracy to commit money laundering.",
+      "event_date": "2024",
+      "severity": "high",
+      "status": "confirmed",
+      "source_ids": [
+        "S19",
+        "S21",
+        "S23"
+      ]
+    },
+    {
+      "id": "litigation-2",
+      "category": "litigation",
+      "summary": "Shareholder class-action proceedings alleged that The Toronto-Dominion Bank and certain directors and officers misrepresented the effectiveness of its AML controls and related investigations. On November 3, 2026, Justice Janet Leiper granted leave and certified the Ontario misrepresentation class action against TD and senior leaders, including former CEO Bharat Masrani; the plaintiffs allege a CA$30 billion market-capitalization loss, and the defendants deny the allegations.",
+      "event_date": "2026-11-03",
+      "severity": "medium",
+      "status": "alleged",
+      "source_ids": [
+        "S19",
+        "S21",
+        "S23",
+        "S26",
+        "S27"
+      ]
+    },
+    {
+      "id": "litigation-3",
+      "category": "litigation",
+      "summary": "On October 13, 2026, Judge Arun Subramanian of the Southern District of New York partially denied the defendants' motion to dismiss Tiessen v. The Toronto-Dominion Bank, allowing the securities fraud class action to proceed to discovery. The amended complaint alleges misrepresentations about TD's Bank Secrecy Act and AML controls, including that senior management knew of long-term, systemic deficiencies.",
+      "event_date": "2026-10-13",
+      "severity": "medium",
+      "status": "alleged",
+      "source_ids": [
+        "S28",
+        "S29"
+      ]
+    },
+    {
+      "id": "litigation-4",
+      "category": "litigation",
+      "summary": "A proposed class action was filed with the Ontario Superior Court of Justice on July 8, 2026 against Toronto Dominion Bank and TD Securities Inc., with Calvin Wong as the proposed representative plaintiff. It alleges that the defendants failed for years to pay required vacation and holiday pay on employees' incentive and other pay under their employee incentive programs.",
+      "event_date": "2026-07-08",
+      "severity": "medium",
+      "status": "alleged",
+      "source_ids": [
+        "S32"
+      ]
+    },
+    {
+      "id": "litigation-5",
+      "category": "litigation",
+      "summary": "Trisal v. TD Bank, N.A., filed on October 2, 2025, alleged that TD Bank unlawfully assessed unrefunded $35 overdraft fees even when customers cured overdrafts by the following business day. Federal court records listed the grace-period suit as terminated on May 15, 2026.",
+      "event_date": "2026-05-15",
+      "severity": "medium",
+      "status": "resolved",
+      "source_ids": [
+        "S20",
+        "S25"
+      ]
+    },
+    {
+      "id": "litigation-6",
+      "category": "litigation",
+      "summary": "On June 27, 2025, Judge Renee Marie Bumb of the New Jersey federal court dismissed a proposed class action alleging that TD Bank wrongfully shared customers' personal financial information through Meta's Pixel tracking code. The court found insufficient allegations of standing and concrete harm and dismissed all claims, but allowed plaintiff Jefferey Stevens to amend his complaint.",
+      "event_date": "2025-06-27",
+      "severity": "medium",
+      "status": "confirmed",
+      "source_ids": [
+        "S18"
+      ]
+    },
+    {
+      "id": "litigation-7",
+      "category": "litigation",
+      "summary": "In In re TD Bank / First Horizon Securities Litigation in the District of New Jersey, lead plaintiffs filed a third amended complaint on January 31, 2025 on behalf of First Horizon securities purchasers. The action concerns alleged misrepresentations about TD Bank's BSA/AML compliance and proposed First Horizon acquisition, which the source says regulators refused to approve because of TD Bank's concealed AML deficiencies; a defense motion to dismiss was due March 14, 2025.",
+      "event_date": "2025-01-31",
+      "severity": "medium",
+      "status": "alleged",
+      "source_ids": [
+        "S30",
+        "S31"
+      ]
+    },
+    {
+      "id": "litigation-8",
+      "category": "litigation",
+      "summary": "The Burns v. TD Bank, N.A. class action challenged APSN overdraft fees assessed when transactions were authorized with a positive available balance but later paid with insufficient funds. TD Bank denied wrongdoing, but a $32,225,000 settlement received final approval on October 15, 2024, with payments beginning in March 2025.",
+      "event_date": "2024-10-15",
+      "severity": "medium",
+      "status": "confirmed",
+      "source_ids": [
+        "S20",
+        "S22"
+      ]
+    },
+    {
+      "id": "litigation-9",
+      "category": "litigation",
+      "summary": "On February 15, 2024, the Ontario Superior Court of Justice approved a settlement in the Canadian duplicative NSF-fee class action against The Toronto-Dominion Bank and The Canada Trust Company. The class covered personal deposit account holders charged an NSF fee on a re-presented pre-authorized debit transaction between February 2, 2019 and November 27, 2023.",
+      "event_date": "2024-02-15",
+      "severity": "medium",
+      "status": "confirmed",
+      "source_ids": [
+        "S24"
+      ]
+    },
+    {
+      "id": "financial_crime-1",
+      "category": "financial_crime",
+      "summary": "TD Bank, N.A. pleaded guilty on October 10, 2024 to conspiring to fail to maintain a BSA-compliant anti-money-laundering program, fail to file accurate currency transaction reports, and launder monetary instruments; its parent, TD Bank US Holding Company, simultaneously pleaded guilty to related charges. TD Bank agreed to pay US$1.8 billion to resolve the DOJ investigation, FinCEN assessed a record US$1.3 billion penalty, and the coordinated DOJ, FinCEN, OCC and Federal Reserve resolutions brought total penalties to almost US$3.1 billion.",
+      "event_date": "2024-10-10",
+      "severity": "high",
+      "status": "confirmed",
+      "source_ids": [
+        "S33",
+        "S34",
+        "S35",
+        "S39",
+        "S41"
+      ]
+    },
+    {
+      "id": "financial_crime-2",
+      "category": "financial_crime",
+      "summary": "TD Bank insider Wilfredo Aquino pleaded guilty to conspiring to launder monetary instruments. While a TD Bank assistant store manager, he facilitated a network that moved approximately US$474 million through TD Bank accounts and accepted retail gift cards totaling over US$11,000.",
+      "event_date": "2026-01-06",
+      "severity": "high",
+      "status": "confirmed",
+      "source_ids": [
+        "S37"
+      ]
+    },
+    {
+      "id": "financial_crime-3",
+      "category": "financial_crime",
+      "summary": "Nunez, then a TD Bank employee in Scotch Plains, New Jersey, pleaded guilty to conspiring to launder monetary instruments and receipt of bribes by a bank employee. He accepted bribes to open shell-company accounts and issue debit cards used to facilitate the transfer of over US$26 million from the United States to Colombia.",
+      "event_date": "2026-01-21",
+      "severity": "high",
+      "status": "confirmed",
+      "source_ids": [
+        "S38"
+      ]
+    },
+    {
+      "id": "financial_crime-4",
+      "category": "financial_crime",
+      "summary": "Former TD Bank employee Leonardo Ayala pleaded guilty to conspiring to launder monetary instruments and receipt of bribes by a bank employee. He opened fraudulent accounts and issued or unblocked debit cards used to funnel approximately US$5.5 million to Colombia, receiving more than US$6,000 in bribes.",
+      "event_date": "2026-01-30",
+      "severity": "high",
+      "status": "confirmed",
+      "source_ids": [
+        "S40"
+      ]
+    },
+    {
+      "id": "financial_crime-5",
+      "category": "financial_crime",
+      "summary": "Former TD Bank employee Gerardo Aquino pleaded guilty to conspiring to launder monetary instruments and receipt of bribes by a bank employee for accepting bribes and laundering more than US$4.8 million to Colombia while employed by TD Bank.",
+      "event_date": "2026-10-06",
+      "severity": "high",
+      "status": "confirmed",
+      "source_ids": [
+        "S36"
+      ]
+    },
+    {
+      "id": "sanctions-1",
+      "category": "sanctions",
+      "summary": "OFAC announced a $115,005.04 settlement with TD Bank, N.A. for apparent violations of the North Korea Sanctions Regulations and the Foreign Narcotics Kingpin Sanctions Regulations. TD Bank processed 1,479 transactions totaling $382,685.38 and maintained nine accounts for employees of North Korea\u2019s UN mission without an OFAC license, and separately maintained accounts for an SDN-listed U.S. resident and allowed $35,514.13 in transactions by that person; the apparent violations were voluntarily self-disclosed and non-egregious.",
+      "event_date": "2021-12-23",
+      "severity": "high",
+      "status": "confirmed",
+      "source_ids": [
+        "S42",
+        "S43"
+      ]
+    },
+    {
+      "id": "data_breach-1",
+      "category": "data_breach",
+      "summary": "Thieves stole thousands from Stephen and Tessa Savage's TD Bank accounts through Zelle and online banking after ransomware targeted their home computer. TD Bank twice denied the couple's Regulation E refund request, stating once that there was no error and once that the transfers were authorized.",
+      "event_date": "2022-04-14",
+      "severity": "low",
+      "status": "alleged",
+      "source_ids": [
+        "S47"
+      ]
+    },
+    {
+      "id": "data_breach-2",
+      "category": "data_breach",
+      "summary": "A breach at TD Bank partner NCB Management Services began on February 1, 2023 and was detected on February 4, affecting more than 1 million individuals, primarily TD Bank customers. Names, Social Security numbers, account and card details were exposed and listed on the dark web, prompting class actions and regulatory scrutiny.",
+      "event_date": "2023-02-01",
+      "severity": "high",
+      "status": "confirmed",
+      "source_ids": [
+        "S49"
+      ]
+    },
+    {
+      "id": "data_breach-3",
+      "category": "data_breach",
+      "summary": "TD Bank disclosed in February 2025 that a former employee had unauthorized access to customer information between August and December 2022, affecting at least eight Massachusetts residents; the employee was terminated and TD worked with law enforcement. Coverage of the confirmed breach said names, contact details, account numbers and, in some cases, Social Security numbers were exposed, TD offered identity protection, and a class action alleging negligence and inadequate data security remained active, with litigation reported as progressing in 2025.",
+      "event_date": "2025-02",
+      "severity": "medium",
+      "status": "confirmed",
+      "source_ids": [
+        "S50",
+        "S52"
+      ]
+    },
+    {
+      "id": "data_breach-4",
+      "category": "data_breach",
+      "summary": "TD reported to Massachusetts regulators on June 15, 2026 that an employee had unauthorized access to U.S. customer records from January 7 to January 30, 2026. The insider incident potentially exposed names, addresses, phone numbers, dates of birth, Social Security numbers, account numbers and transactional data; no external hacking or further misuse was reported at disclosure.",
+      "event_date": "2026-06-15",
+      "severity": "medium",
+      "status": "confirmed",
+      "source_ids": [
+        "S48",
+        "S51"
+      ]
+    },
+    {
+      "id": "data_breach-5",
+      "category": "data_breach",
+      "summary": "TD Bank disclosed to Massachusetts regulators on September 15, 2026 a data security event that may have exposed customer personal and financial information; 54 Massachusetts residents were identified, while the nationwide total was not disclosed. Potentially exposed data included Social Security numbers, government-issued identification, pay stubs, W-2 forms, financial account information and payment-card numbers, and TD offered two years of Fraud-Defender identity monitoring.",
+      "event_date": "2026-09-15",
+      "severity": "medium",
+      "status": "confirmed",
+      "source_ids": [
+        "S52",
+        "S53"
+      ]
+    },
+    {
+      "id": "leadership-1",
+      "category": "leadership",
+      "summary": "The CFPB ordered TD Bank to pay $28 million for years of inaccurate consumer-credit reporting, including information it knew or suspected was fraudulent, and for failing to properly investigate disputes, affecting hundreds of thousands of customers. CFPB Director Rohit Chopra criticized TD Bank management for prioritizing growth and mergers over fixing the problems.",
+      "event_date": "2024-09-11",
+      "severity": "high",
+      "status": "confirmed",
+      "source_ids": [
+        "S7"
+      ]
+    },
+    {
+      "id": "leadership-2",
+      "category": "leadership",
+      "summary": "A Senate letter on TD Bank\u2019s DOJ resolution, which included a historic $3 billion fine, said bank leadership knowingly presided over a criminally deficient anti-money-laundering program and high-level executives knew of serious problems, yet DOJ did not charge them and structured the charges to shift legal liability to holding company TD BHC. Commentary on the plea agreement and consent order said senior management repeatedly ignored warnings and speculated, without confirmation, that one or more whistleblowers may have helped build the government\u2019s case.",
+      "event_date": "2024-10",
+      "severity": "high",
+      "status": "confirmed",
+      "source_ids": [
+        "S55",
+        "S56"
+      ]
+    }
+  ],
+  "events": [
+    {
+      "id": "regulatory-1",
+      "members": [
+        "regulatory-1",
+        "financial_crime-1",
+        "litigation-1"
+      ],
+      "categories": [
+        "regulatory",
+        "financial_crime",
+        "litigation"
+      ],
+      "severity": "high",
+      "status": "confirmed",
+      "event_date": "2024-10-10",
+      "summary": "TD Bank, N.A. and TD Bank USA, N.A. entered a coordinated U.S. BSA/AML resolution: FinCEN imposed a $1.3 billion civil money penalty, the OCC assessed $450 million and imposed a cease-and-desist order with an asset cap/growth and business restrictions, and the Federal Reserve fined parent Toronto-Dominion Bank $123.5 million; TD reported total payments of approximately US$3.09 billion across the OCC, Federal Reserve, FinCEN and DOJ. TD Bank, N.A. agreed to plead guilty to a criminal violation of 18 U.S.C. \u00a7371 and TD Bank US Holding Company to criminal violations of 31 U.S.C. \u00a7\u00a75322 and 5324, with approximately $1.89 billion payable to DOJ; the DOJ filing described repeated AML transaction-monitoring deficiencies, and the resolution requires remediation and independent compliance review.",
+      "source_ids": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6",
+        "S9",
+        "S11",
+        "S13",
+        "S33",
+        "S34",
+        "S35",
+        "S39",
+        "S41",
+        "S19",
+        "S21",
+        "S23"
+      ]
+    },
+    {
+      "id": "regulatory-3",
+      "members": [
+        "regulatory-3"
+      ],
+      "categories": [
+        "regulatory"
+      ],
+      "severity": "high",
+      "status": "confirmed",
+      "event_date": "2024-08-14",
+      "summary": "The CFTC ordered The Toronto Dominion Bank (TD Bank), a swap dealer, to pay a US$75 million civil monetary penalty, cease and desist, and undertake remediation for recordkeeping and supervision failures involving firm-wide use of unapproved communication methods, including personal text messages; TD Bank admitted the facts in the order.",
+      "source_ids": [
+        "S8",
+        "S10"
+      ]
+    },
+    {
+      "id": "regulatory-4",
+      "members": [
+        "regulatory-4"
+      ],
+      "categories": [
+        "regulatory"
+      ],
+      "severity": "medium",
+      "status": "confirmed",
+      "event_date": "2024-08-14",
+      "summary": "The CFTC ordered The Toronto Dominion Bank (TD Bank) to pay a $4 million civil monetary penalty and cease and desist over supervision failures that caused it not to surveil certain communications for hundreds of swap-dealer personnel over a five-year period; TD Bank admitted the facts and acknowledged violations of the Commodity Exchange Act and CFTC regulations.",
+      "source_ids": [
+        "S12"
+      ]
+    },
+    {
+      "id": "litigation-2",
+      "members": [
+        "litigation-2"
+      ],
+      "categories": [
+        "litigation"
+      ],
+      "severity": "medium",
+      "status": "alleged",
+      "event_date": "2026-11-03",
+      "summary": "Shareholder class-action proceedings alleged that The Toronto-Dominion Bank and certain directors and officers misrepresented the effectiveness of its AML controls and related investigations. On November 3, 2026, Justice Janet Leiper granted leave and certified the Ontario misrepresentation class action against TD and senior leaders, including former CEO Bharat Masrani; the plaintiffs allege a CA$30 billion market-capitalization loss, and the defendants deny the allegations.",
+      "source_ids": [
+        "S19",
+        "S21",
+        "S23",
+        "S26",
+        "S27"
+      ]
+    },
+    {
+      "id": "litigation-3",
+      "members": [
+        "litigation-3"
+      ],
+      "categories": [
+        "litigation"
+      ],
+      "severity": "medium",
+      "status": "alleged",
+      "event_date": "2026-10-13",
+      "summary": "On October 13, 2026, Judge Arun Subramanian of the Southern District of New York partially denied the defendants' motion to dismiss Tiessen v. The Toronto-Dominion Bank, allowing the securities fraud class action to proceed to discovery. The amended complaint alleges misrepresentations about TD's Bank Secrecy Act and AML controls, including that senior management knew of long-term, systemic deficiencies.",
+      "source_ids": [
+        "S28",
+        "S29"
+      ]
+    },
+    {
+      "id": "litigation-5",
+      "members": [
+        "litigation-5"
+      ],
+      "categories": [
+        "litigation"
+      ],
+      "severity": "medium",
+      "status": "resolved",
+      "event_date": "2026-05-15",
+      "summary": "Trisal v. TD Bank, N.A., filed on October 2, 2025, alleged that TD Bank unlawfully assessed unrefunded $35 overdraft fees even when customers cured overdrafts by the following business day. Federal court records listed the grace-period suit as terminated on May 15, 2026.",
+      "source_ids": [
+        "S20",
+        "S25"
+      ]
+    },
+    {
+      "id": "litigation-7",
+      "members": [
+        "litigation-7"
+      ],
+      "categories": [
+        "litigation"
+      ],
+      "severity": "medium",
+      "status": "alleged",
+      "event_date": "2025-01-31",
+      "summary": "In In re TD Bank / First Horizon Securities Litigation in the District of New Jersey, lead plaintiffs filed a third amended complaint on January 31, 2025 on behalf of First Horizon securities purchasers. The action concerns alleged misrepresentations about TD Bank's BSA/AML compliance and proposed First Horizon acquisition, which the source says regulators refused to approve because of TD Bank's concealed AML deficiencies; a defense motion to dismiss was due March 14, 2025.",
+      "source_ids": [
+        "S30",
+        "S31"
+      ]
+    },
+    {
+      "id": "litigation-8",
+      "members": [
+        "litigation-8"
+      ],
+      "categories": [
+        "litigation"
+      ],
+      "severity": "medium",
+      "status": "confirmed",
+      "event_date": "2024-10-15",
+      "summary": "The Burns v. TD Bank, N.A. class action challenged APSN overdraft fees assessed when transactions were authorized with a positive available balance but later paid with insufficient funds. TD Bank denied wrongdoing, but a $32,225,000 settlement received final approval on October 15, 2024, with payments beginning in March 2025.",
+      "source_ids": [
+        "S20",
+        "S22"
+      ]
+    },
+    {
+      "id": "litigation-4",
+      "members": [
+        "litigation-4"
+      ],
+      "categories": [
+        "litigation"
+      ],
+      "severity": "medium",
+      "status": "alleged",
+      "event_date": "2026-07-08",
+      "summary": "A proposed class action was filed with the Ontario Superior Court of Justice on July 8, 2026 against Toronto Dominion Bank and TD Securities Inc., with Calvin Wong as the proposed representative plaintiff. It alleges that the defendants failed for years to pay required vacation and holiday pay on employees' incentive and other pay under their employee incentive programs.",
+      "source_ids": [
+        "S32"
+      ]
+    },
+    {
+      "id": "litigation-6",
+      "members": [
+        "litigation-6"
+      ],
+      "categories": [
+        "litigation"
+      ],
+      "severity": "medium",
+      "status": "confirmed",
+      "event_date": "2025-06-27",
+      "summary": "On June 27, 2025, Judge Renee Marie Bumb of the New Jersey federal court dismissed a proposed class action alleging that TD Bank wrongfully shared customers' personal financial information through Meta's Pixel tracking code. The court found insufficient allegations of standing and concrete harm and dismissed all claims, but allowed plaintiff Jefferey Stevens to amend his complaint.",
+      "source_ids": [
+        "S18"
+      ]
+    },
+    {
+      "id": "litigation-9",
+      "members": [
+        "litigation-9"
+      ],
+      "categories": [
+        "litigation"
+      ],
+      "severity": "medium",
+      "status": "confirmed",
+      "event_date": "2024-02-15",
+      "summary": "On February 15, 2024, the Ontario Superior Court of Justice approved a settlement in the Canadian duplicative NSF-fee class action against The Toronto-Dominion Bank and The Canada Trust Company. The class covered personal deposit account holders charged an NSF fee on a re-presented pre-authorized debit transaction between February 2, 2019 and November 27, 2023.",
+      "source_ids": [
+        "S24"
+      ]
+    },
+    {
+      "id": "financial_crime-2",
+      "members": [
+        "financial_crime-2"
+      ],
+      "categories": [
+        "financial_crime"
+      ],
+      "severity": "high",
+      "status": "confirmed",
+      "event_date": "2026-01-06",
+      "summary": "TD Bank insider Wilfredo Aquino pleaded guilty to conspiring to launder monetary instruments. While a TD Bank assistant store manager, he facilitated a network that moved approximately US$474 million through TD Bank accounts and accepted retail gift cards totaling over US$11,000.",
+      "source_ids": [
+        "S37"
+      ]
+    },
+    {
+      "id": "financial_crime-3",
+      "members": [
+        "financial_crime-3"
+      ],
+      "categories": [
+        "financial_crime"
+      ],
+      "severity": "high",
+      "status": "confirmed",
+      "event_date": "2026-01-21",
+      "summary": "Nunez, then a TD Bank employee in Scotch Plains, New Jersey, pleaded guilty to conspiring to launder monetary instruments and receipt of bribes by a bank employee. He accepted bribes to open shell-company accounts and issue debit cards used to facilitate the transfer of over US$26 million from the United States to Colombia.",
+      "source_ids": [
+        "S38"
+      ]
+    },
+    {
+      "id": "financial_crime-4",
+      "members": [
+        "financial_crime-4"
+      ],
+      "categories": [
+        "financial_crime"
+      ],
+      "severity": "high",
+      "status": "confirmed",
+      "event_date": "2026-01-30",
+      "summary": "Former TD Bank employee Leonardo Ayala pleaded guilty to conspiring to launder monetary instruments and receipt of bribes by a bank employee. He opened fraudulent accounts and issued or unblocked debit cards used to funnel approximately US$5.5 million to Colombia, receiving more than US$6,000 in bribes.",
+      "source_ids": [
+        "S40"
+      ]
+    },
+    {
+      "id": "financial_crime-5",
+      "members": [
+        "financial_crime-5"
+      ],
+      "categories": [
+        "financial_crime"
+      ],
+      "severity": "high",
+      "status": "confirmed",
+      "event_date": "2026-10-06",
+      "summary": "Former TD Bank employee Gerardo Aquino pleaded guilty to conspiring to launder monetary instruments and receipt of bribes by a bank employee for accepting bribes and laundering more than US$4.8 million to Colombia while employed by TD Bank.",
+      "source_ids": [
+        "S36"
+      ]
+    },
+    {
+      "id": "sanctions-1",
+      "members": [
+        "sanctions-1"
+      ],
+      "categories": [
+        "sanctions"
+      ],
+      "severity": "high",
+      "status": "confirmed",
+      "event_date": "2021-12-23",
+      "summary": "OFAC announced a $115,005.04 settlement with TD Bank, N.A. for apparent violations of the North Korea Sanctions Regulations and the Foreign Narcotics Kingpin Sanctions Regulations. TD Bank processed 1,479 transactions totaling $382,685.38 and maintained nine accounts for employees of North Korea\u2019s UN mission without an OFAC license, and separately maintained accounts for an SDN-listed U.S. resident and allowed $35,514.13 in transactions by that person; the apparent violations were voluntarily self-disclosed and non-egregious.",
+      "source_ids": [
+        "S42",
+        "S43"
+      ]
+    },
+    {
+      "id": "data_breach-2",
+      "members": [
+        "data_breach-2"
+      ],
+      "categories": [
+        "data_breach"
+      ],
+      "severity": "high",
+      "status": "confirmed",
+      "event_date": "2023-02-01",
+      "summary": "A breach at TD Bank partner NCB Management Services began on February 1, 2023 and was detected on February 4, affecting more than 1 million individuals, primarily TD Bank customers. Names, Social Security numbers, account and card details were exposed and listed on the dark web, prompting class actions and regulatory scrutiny.",
+      "source_ids": [
+        "S49"
+      ]
+    },
+    {
+      "id": "data_breach-3",
+      "members": [
+        "data_breach-3"
+      ],
+      "categories": [
+        "data_breach"
+      ],
+      "severity": "medium",
+      "status": "confirmed",
+      "event_date": "2025-02",
+      "summary": "TD Bank disclosed in February 2025 that a former employee had unauthorized access to customer information between August and December 2022, affecting at least eight Massachusetts residents; the employee was terminated and TD worked with law enforcement. Coverage of the confirmed breach said names, contact details, account numbers and, in some cases, Social Security numbers were exposed, TD offered identity protection, and a class action alleging negligence and inadequate data security remained active, with litigation reported as progressing in 2025.",
+      "source_ids": [
+        "S50",
+        "S52"
+      ]
+    },
+    {
+      "id": "data_breach-4",
+      "members": [
+        "data_breach-4"
+      ],
+      "categories": [
+        "data_breach"
+      ],
+      "severity": "medium",
+      "status": "confirmed",
+      "event_date": "2026-06-15",
+      "summary": "TD reported to Massachusetts regulators on June 15, 2026 that an employee had unauthorized access to U.S. customer records from January 7 to January 30, 2026. The insider incident potentially exposed names, addresses, phone numbers, dates of birth, Social Security numbers, account numbers and transactional data; no external hacking or further misuse was reported at disclosure.",
+      "source_ids": [
+        "S48",
+        "S51"
+      ]
+    },
+    {
+      "id": "data_breach-5",
+      "members": [
+        "data_breach-5"
+      ],
+      "categories": [
+        "data_breach"
+      ],
+      "severity": "medium",
+      "status": "confirmed",
+      "event_date": "2026-09-15",
+      "summary": "TD Bank disclosed to Massachusetts regulators on September 15, 2026 a data security event that may have exposed customer personal and financial information; 54 Massachusetts residents were identified, while the nationwide total was not disclosed. Potentially exposed data included Social Security numbers, government-issued identification, pay stubs, W-2 forms, financial account information and payment-card numbers, and TD offered two years of Fraud-Defender identity monitoring.",
+      "source_ids": [
+        "S52",
+        "S53"
+      ]
+    },
+    {
+      "id": "data_breach-1",
+      "members": [
+        "data_breach-1"
+      ],
+      "categories": [
+        "data_breach"
+      ],
+      "severity": "low",
+      "status": "alleged",
+      "event_date": "2022-04-14",
+      "summary": "Thieves stole thousands from Stephen and Tessa Savage's TD Bank accounts through Zelle and online banking after ransomware targeted their home computer. TD Bank twice denied the couple's Regulation E refund request, stating once that there was no error and once that the transfers were authorized.",
+      "source_ids": [
+        "S47"
+      ]
+    },
+    {
+      "id": "leadership-2",
+      "members": [
+        "leadership-2"
+      ],
+      "categories": [
+        "leadership"
+      ],
+      "severity": "high",
+      "status": "confirmed",
+      "event_date": "2024-10",
+      "summary": "A Senate letter on TD Bank\u2019s DOJ resolution, which included a historic $3 billion fine, said bank leadership knowingly presided over a criminally deficient anti-money-laundering program and high-level executives knew of serious problems, yet DOJ did not charge them and structured the charges to shift legal liability to holding company TD BHC. Commentary on the plea agreement and consent order said senior management repeatedly ignored warnings and speculated, without confirmation, that one or more whistleblowers may have helped build the government\u2019s case.",
+      "source_ids": [
+        "S55",
+        "S56"
+      ]
+    },
+    {
+      "id": "leadership-1",
+      "members": [
+        "leadership-1",
+        "regulatory-2"
+      ],
+      "categories": [
+        "leadership",
+        "regulatory"
+      ],
+      "severity": "high",
+      "status": "confirmed",
+      "event_date": "2024-09-11",
+      "summary": "The CFPB ordered TD Bank to pay $28 million for years of inaccurate consumer-credit reporting, including information it knew or suspected was fraudulent, and for failing to properly investigate disputes, affecting hundreds of thousands of customers. CFPB Director Rohit Chopra criticized TD Bank management for prioritizing growth and mergers over fixing the problems.",
+      "source_ids": [
+        "S7"
+      ]
+    }
+  ],
+  "held_back": [],
+  "duplicate_groups": [
+    [
+      "regulatory-1",
+      "litigation-1",
+      "financial_crime-1"
+    ],
+    [
+      "regulatory-2",
+      "leadership-1"
+    ]
+  ],
+  "merge": {
+    "attempts": 1,
+    "errors": [],
+    "prompt_tokens": 3020,
+    "completion_tokens": 1029
+  },
+  "source_check": null,
+  "categories": {
+    "regulatory": {
+      "parsed": true,
+      "attempts": 1,
+      "errors": [],
+      "invalid_citations": 0,
+      "dropped_findings": 0,
+      "rejected_sources": [
+        {
+          "source_id": "S14",
+          "reason": "different_entity"
+        },
+        {
+          "source_id": "S15",
+          "reason": "not_adverse"
+        },
+        {
+          "source_id": "S16",
+          "reason": "different_entity"
+        },
+        {
+          "source_id": "S17",
+          "reason": "different_entity"
+        }
+      ],
+      "prompt_tokens": 9823,
+      "completion_tokens": 7824,
+      "latency_s": 65.729
+    },
+    "litigation": {
+      "parsed": true,
+      "attempts": 1,
+      "errors": [],
+      "invalid_citations": 0,
+      "dropped_findings": 0,
+      "rejected_sources": [],
+      "prompt_tokens": 7065,
+      "completion_tokens": 11748,
+      "latency_s": 91.891
+    },
+    "financial_crime": {
+      "parsed": true,
+      "attempts": 1,
+      "errors": [],
+      "invalid_citations": 0,
+      "dropped_findings": 0,
+      "rejected_sources": [
+        {
+          "source_id": "S15",
+          "reason": "not_adverse"
+        },
+        {
+          "source_id": "S17",
+          "reason": "different_entity"
+        }
+      ],
+      "prompt_tokens": 5274,
+      "completion_tokens": 6769,
+      "latency_s": 55.309
+    },
+    "sanctions": {
+      "parsed": true,
+      "attempts": 1,
+      "errors": [],
+      "invalid_citations": 0,
+      "dropped_findings": 0,
+      "rejected_sources": [
+        {
+          "source_id": "S1",
+          "reason": "not_relevant"
+        },
+        {
+          "source_id": "S10",
+          "reason": "not_relevant"
+        },
+        {
+          "source_id": "S11",
+          "reason": "not_relevant"
+        },
+        {
+          "source_id": "S39",
+          "reason": "not_relevant"
+        },
+        {
+          "source_id": "S44",
+          "reason": "not_relevant"
+        },
+        {
+          "source_id": "S45",
+          "reason": "not_relevant"
+        }
+      ],
+      "prompt_tokens": 4274,
+      "completion_tokens": 2486,
+      "latency_s": 20.931
+    },
+    "data_breach": {
+      "parsed": true,
+      "attempts": 1,
+      "errors": [],
+      "invalid_citations": 0,
+      "dropped_findings": 0,
+      "rejected_sources": [
+        {
+          "source_id": "S46",
+          "reason": "not_relevant"
+        }
+      ],
+      "prompt_tokens": 3676,
+      "completion_tokens": 10677,
+      "latency_s": 93.691
+    },
+    "financial_distress": {
+      "parsed": true,
+      "attempts": 1,
+      "errors": [],
+      "invalid_citations": 0,
+      "dropped_findings": 0,
+      "rejected_sources": [
+        {
+          "source_id": "S15",
+          "reason": "not_adverse"
+        },
+        {
+          "source_id": "S17",
+          "reason": "different_entity"
+        },
+        {
+          "source_id": "S54",
+          "reason": "not_adverse"
+        }
+      ],
+      "prompt_tokens": 1937,
+      "completion_tokens": 227,
+      "latency_s": 2.137
+    },
+    "leadership": {
+      "parsed": true,
+      "attempts": 1,
+      "errors": [],
+      "invalid_citations": 0,
+      "dropped_findings": 0,
+      "rejected_sources": [
+        {
+          "source_id": "S15",
+          "reason": "not_adverse"
+        },
+        {
+          "source_id": "S17",
+          "reason": "different_entity"
+        },
+        {
+          "source_id": "S57",
+          "reason": "not_adverse"
+        }
+      ],
+      "prompt_tokens": 3364,
+      "completion_tokens": 4195,
+      "latency_s": 32.364
+    }
+  },
+  "sources": [
+    {
+      "id": "S1",
+      "url": "https://www.fincen.gov/system/files/enforcement_action/2024-10-10/FinCEN-TD-Bank-Consent-Order-508FINAL.pdf",
+      "title": "FinCEN TD Bank Consent Order, Number 2024-02",
+      "published_date": "Thu, 10 Oct 2024 00:00:00 GMT",
+      "categories": [
+        "regulatory",
+        "sanctions"
+      ]
+    },
+    {
+      "id": "S2",
+      "url": "https://www.occ.gov/news-issuances/news-releases/2024/nr-occ-2024-116.html",
+      "title": "OCC Issues Cease and Desist Order, Assesses $450 Million Civil Money Penalty, and Imposes Growth Restriction Upon TD Bank, N.A. for BSA/AML Deficiencies | OCC",
+      "published_date": "Thu, 10 Oct 2024 13:00:00 GMT",
+      "categories": [
+        "regulatory"
+      ]
+    },
+    {
+      "id": "S3",
+      "url": "https://www.occ.gov/static/enforcement-actions/eaAA-ENF-2024-77.pdf",
+      "title": "Consent Order - TD Bank, N.A. and ...",
+      "published_date": "Wed, 09 Oct 2024 00:00:00 GMT",
+      "categories": [
+        "regulatory"
+      ]
+    },
+    {
+      "id": "S4",
+      "url": "https://www.occ.gov/news-issuances/news-releases/2024/nr-occ-2024-118.html",
+      "title": "OCC Announces Enforcement Actions for October 2024 | OCC",
+      "published_date": "Thu, 17 Oct 2024 13:00:00 GMT",
+      "categories": [
+        "regulatory"
+      ]
+    },
+    {
+      "id": "S5",
+      "url": "https://www.federalreserve.gov/newsevents/pressreleases/files/enf20241010a1.pdf",
+      "title": "Enforcement action - Toronto-Dominion Bank - Federal Reserve",
+      "published_date": "Thu, 10 Oct 2024 00:00:00 GMT",
+      "categories": [
+        "regulatory"
+      ]
+    },
+    {
+      "id": "S6",
+      "url": "https://www.occ.gov/news-issuances/news-releases/2024/nr-occ-2024-116a.pdf",
+      "title": "Fact Sheet: OCC Cease and Desist Order and Civil Money Penalty against TD Bank N.A. and TD Bank USA, N.A.",
+      "published_date": "Mon, 05 Jan 2026 01:52:43 GMT",
+      "categories": [
+        "regulatory"
+      ]
+    },
+    {
+      "id": "S7",
+      "url": "https://www.consumerfinance.gov/archive/newsroom/cfpb-orders-td-bank-to-pay-28-million-for-breakdowns-that-illegally-tarnished-consumer-credit-reports",
+      "title": "CFPB Orders TD Bank to Pay $28 Million for Breakdowns that Illegally Tarnished Consumer Credit Reports | Consumer Financial Protection Bureau",
+      "published_date": "Wed, 11 Sep 2024 00:00:00 GMT",
+      "categories": [
+        "regulatory",
+        "leadership"
+      ]
+    },
+    {
+      "id": "S8",
+      "url": "https://www.cftc.gov/PressRoom/PressReleases/8943-24",
+      "title": "CFTC Orders TD Bank and Cowen to Pay Civil Monetary Penalties for Recordkeeping and Supervision Failures for Firm-Wide Use of Unapproved Communication Methods | CFTC",
+      "published_date": "Wed, 14 Aug 2024 00:00:00 GMT",
+      "categories": [
+        "regulatory"
+      ]
+    },
+    {
+      "id": "S9",
+      "url": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20241010a.htm",
+      "title": "Federal Reserve Board - Federal Reserve Board fines Toronto-Dominion Bank $123.5 million for violations related to anti-money laundering laws",
+      "published_date": "Thu, 10 Oct 2024 00:00:00 GMT",
+      "categories": [
+        "regulatory"
+      ]
+    },
+    {
+      "id": "S10",
+      "url": "https://www.cftc.gov/media/11086/enfthetorontodominionbankorder081324/download",
+      "title": "The Toronto Dominion Bank, Respondent",
+      "published_date": "Tue, 13 Aug 2024 00:00:00 GMT",
+      "categories": [
+        "regulatory",
+        "sanctions"
+      ]
+    },
+    {
+      "id": "S11",
+      "url": "https://www.justice.gov/archives/opa/media/1373346/dl",
+      "title": "Case 2:24-cr-00667-ES Document 1 Filed 10/10/24 Page 1 of 47 PageID",
+      "published_date": "Thu, 10 Oct 2024 00:00:00 GMT",
+      "categories": [
+        "regulatory",
+        "sanctions"
+      ]
+    },
+    {
+      "id": "S12",
+      "url": "https://www.cftc.gov/PressRoom/PressReleases/8944-24",
+      "title": "CFTC Orders TD Bank to Pay $4 Million for Supervision Failures Impacting its Electronic Communications Surveillance System | CFTC",
+      "published_date": "Wed, 14 Aug 2024 00:00:00 GMT",
+      "categories": [
+        "regulatory"
+      ]
+    },
+    {
+      "id": "S13",
+      "url": "https://www.td.com/content/dam/tdcom/canada/about-td/pdf/investor/resolution-of-aml-investigations-en.pdf",
+      "title": "Resolution of AML Investigations",
+      "published_date": "Thu, 10 Oct 2024 00:00:00 GMT",
+      "categories": [
+        "regulatory"
+      ]
+    },
+    {
+      "id": "S14",
+      "url": "https://tavily.com/knowledge/company/1uTNK2JCaD4d",
+      "title": "The Options Clearing Corporation (OCC)",
+      "published_date": null,
+      "categories": [
+        "regulatory"
+      ]
+    },
+    {
+      "id": "S15",
+      "url": "https://tavily.com/knowledge/company/bzMXIgVhWnjq",
+      "title": "TDBanknorth N.A.",
+      "published_date": null,
+      "categories": [
+        "regulatory",
+        "financial_crime",
+        "financial_distress",
+        "leadership"
+      ]
+    },
+    {
+      "id": "S16",
+      "url": "https://tavily.com/knowledge/company/O29iFni7N0Qq",
+      "title": "OCC",
+      "published_date": null,
+      "categories": [
+        "regulatory"
+      ]
+    },
+    {
+      "id": "S17",
+      "url": "https://tavily.com/knowledge/company/wvU90ex1rJGz",
+      "title": "Media Room",
+      "published_date": null,
+      "categories": [
+        "regulatory",
+        "financial_crime",
+        "financial_distress",
+        "leadership"
+      ]
+    },
+    {
+      "id": "S18",
+      "url": "https://bankingjournal.aba.com/2025/08/new-jersey-district-court-dismisses-class-action-against-td-bank-over-data-sharing",
+      "title": "New Jersey district court dismisses class action against TD Bank over data sharing | ABA Banking Journal",
+      "published_date": "Fri, 01 Aug 2025 14:20:29 GMT",
+      "categories": [
+        "litigation"
+      ]
+    },
+    {
+      "id": "S19",
+      "url": "https://rochongenova.com/cases/td-aml",
+      "title": "Td Aml Class Action | Rochon Genova",
+      "published_date": "Wed, 20 May 2026 15:49:44 GMT",
+      "categories": [
+        "litigation"
+      ]
+    },
+    {
+      "id": "S20",
+      "url": "https://settlementinsight.com/td-bank-overdraft-fees-lawsuit",
+      "title": "TD Bank Overdraft Fees Class Action: What Paid, What Closed (2026) \u2013 Settlement Insight",
+      "published_date": "Wed, 18 Nov 2026 00:00:00 GMT",
+      "categories": [
+        "litigation"
+      ]
+    },
+    {
+      "id": "S21",
+      "url": "https://ca.finance.yahoo.com/news/ontario-court-certifies-class-action-223156349.html",
+      "title": "Ontario court certifies class-action suit against TD Bank regarding money laundering",
+      "published_date": "Wed, 04 Nov 2026 22:31:56 GMT",
+      "categories": [
+        "litigation"
+      ]
+    },
+    {
+      "id": "S22",
+      "url": "https://tdbankapsnfeeclassaction.com",
+      "title": "Burns v. TD Bank - Home",
+      "published_date": "Tue, 25 Mar 2025 00:00:00 GMT",
+      "categories": [
+        "litigation"
+      ]
+    },
+    {
+      "id": "S23",
+      "url": "https://www.investmentexecutive.com/news/regulation/ontario-court-certifies-class-action-suit-against-td-bank-regarding-money-laundering",
+      "title": "Ontario court certifies class-action suit against TD Bank regarding money laundering - Investment Executive",
+      "published_date": "Thu, 05 Nov 2026 13:09:00 GMT",
+      "categories": [
+        "litigation"
+      ]
+    },
+    {
+      "id": "S24",
+      "url": "https://kmlaw.ca/cases/td-bank-duplicative-nsf-fees-class-action",
+      "title": "TD Bank Duplicative NSF Fees Class Action - Koskie Minsky LLP",
+      "published_date": "Tue, 30 Jan 2024 00:00:00 GMT",
+      "categories": [
+        "litigation"
+      ]
+    },
+    {
+      "id": "S25",
+      "url": "https://www.classaction.org/media/trisal-v-td-bank-na-complaint.pdf",
+      "title": "trisal-v-td-bank-na-complaint.pdf - Class action lawsuits",
+      "published_date": null,
+      "categories": [
+        "litigation"
+      ]
+    },
+    {
+      "id": "S26",
+      "url": "https://himprolaw.com/class-action-td-securities",
+      "title": "TD Securities Class Action | Himelfarb Proszanski",
+      "published_date": "Fri, 26 Jun 2026 09:12:17 GMT",
+      "categories": [
+        "litigation"
+      ]
+    },
+    {
+      "id": "S27",
+      "url": "https://www.prnewswire.com/news-releases/ontario-court-grants-leave-and-certifies-money-laundering-misrepresentation-class-action-against-the-toronto-dominion-bank-302929736.html",
+      "title": "Ontario Court Grants Leave and Certifies Money Laundering Misrepresentation Class Action Against The Toronto-Dominion Bank",
+      "published_date": "Wed, 04 Nov 2026 20:20:00 GMT",
+      "categories": [
+        "litigation"
+      ]
+    },
+    {
+      "id": "S28",
+      "url": "https://www.bfalaw.com/cases/tiessen-v-the-toronto-dominion-bank-et-al",
+      "title": "Tiessen v. The Toronto-Dominion Bank et al. | BFA",
+      "published_date": "Thu, 16 Jan 2025 00:00:00 GMT",
+      "categories": [
+        "litigation"
+      ]
+    },
+    {
+      "id": "S29",
+      "url": "https://www.bfalaw.com/news/case-updates/2026-10-13-bfa-defeats-motion-to-dismiss-in-td-bank-securities-litigation",
+      "title": "BFA Defeats Motion to Dismiss in TD Bank Securities Litigation | BFA",
+      "published_date": "Tue, 13 Oct 2026 00:00:00 GMT",
+      "categories": [
+        "litigation"
+      ]
+    },
+    {
+      "id": "S30",
+      "url": "https://www.blbglaw.com/cases-investigations/td-bank-first-horizon",
+      "title": "TD Bank / First Horizon | Bernstein Litowitz Berger & Grossmann LLP",
+      "published_date": "Tue, 04 Feb 2025 00:00:00 GMT",
+      "categories": [
+        "litigation"
+      ]
+    },
+    {
+      "id": "S31",
+      "url": "http://www.blbglaw.com/cases-investigations/td-bank-first-horizon",
+      "title": "TD Bank / First Horizon | Bernstein Litowitz Berger & Grossmann LLP",
+      "published_date": "Fri, 14 Feb 2025 00:00:00 GMT",
+      "categories": [
+        "litigation"
+      ]
+    },
+    {
+      "id": "S32",
+      "url": "https://www.royoconnor.ca/cases/td-bank-td-securities-unpaid-vacation-pay-incentive-pay",
+      "title": "Toronto Dominion Bank and TD Securities Unpaid Vacation & Holiday Pay on Incentive Pay | Roy O'Connor LLP",
+      "published_date": "Wed, 08 Jul 2026 00:00:00 GMT",
+      "categories": [
+        "litigation"
+      ]
+    },
+    {
+      "id": "S33",
+      "url": "https://www.fincen.gov/news/news-releases/fincen-announces-recipients-its-11th-law-enforcement-awards-program",
+      "title": "FinCEN Announces Recipients of Its 11th Law Enforcement Awards Program | FinCEN.gov",
+      "published_date": "Mon, 22 Jun 2026 00:00:00 GMT",
+      "categories": [
+        "financial_crime"
+      ]
+    },
+    {
+      "id": "S34",
+      "url": "https://www.justice.gov/archives/opa/speech/deputy-attorney-general-lisa-monaco-delivers-remarks-announcing-td-banks-guilty-plea",
+      "title": "Office of Public Affairs | Deputy Attorney General Lisa Monaco Delivers Remarks Announcing TD Bank\u2019s Guilty Plea for Bank Secrecy Act and Money Laundering Conspiracy Violations in $1.8B Resolution | United States Department of Justice",
+      "published_date": "Thu, 10 Oct 2024 16:18:40 GMT",
+      "categories": [
+        "financial_crime"
+      ]
+    },
+    {
+      "id": "S35",
+      "url": "https://www.justice.gov/criminal/case/united-states-america-v-td-bank-na",
+      "title": "Criminal Division |  United States of America v. TD Bank, N.A. | United States Department of Justice",
+      "published_date": "Tue, 29 Oct 2024 19:06:38 GMT",
+      "categories": [
+        "financial_crime"
+      ]
+    },
+    {
+      "id": "S36",
+      "url": "https://www.justice.gov/opa/pr/former-td-bank-employee-pleads-guilty-accepting-bribes-laundering-48-million-colombia",
+      "title": "Office of Public Affairs | Former TD Bank Employee Pleads Guilty to Accepting Bribes, Laundering $4.8 Million to Colombia | United States Department of Justice",
+      "published_date": "Tue, 06 Oct 2026 17:41:19 GMT",
+      "categories": [
+        "financial_crime"
+      ]
+    },
+    {
+      "id": "S37",
+      "url": "https://www.justice.gov/opa/pr/td-bank-insider-pleads-guilty-facilitating-money-laundering",
+      "title": "Office of Public Affairs | TD Bank Insider Pleads Guilty to Facilitating Money Laundering | United States Department of Justice",
+      "published_date": "Tue, 06 Jan 2026 22:03:16 GMT",
+      "categories": [
+        "financial_crime"
+      ]
+    },
+    {
+      "id": "S38",
+      "url": "https://www.justice.gov/opa/pr/td-bank-insider-pleads-guilty-facilitating-colombian-atm-money-laundering-scheme",
+      "title": "Office of Public Affairs | TD Bank Insider Pleads Guilty to Facilitating Colombian ATM Money Laundering Scheme | United States Department of Justice",
+      "published_date": "Wed, 21 Jan 2026 22:01:27 GMT",
+      "categories": [
+        "financial_crime"
+      ]
+    },
+    {
+      "id": "S39",
+      "url": "https://www.fincen.gov/news/news-releases/fincen-assesses-record-13-billion-penalty-against-td-bank",
+      "title": "FinCEN Assesses Record $1.3 Billion Penalty against TD Bank | FinCEN.gov",
+      "published_date": "Thu, 10 Oct 2024 00:00:00 GMT",
+      "categories": [
+        "financial_crime",
+        "sanctions"
+      ]
+    },
+    {
+      "id": "S40",
+      "url": "https://www.justice.gov/opa/pr/former-td-bank-employee-pleads-guilty-accepting-bribes-laundering-55-million-colombia",
+      "title": "Office of Public Affairs |  Former TD Bank Employee Pleads Guilty to Accepting Bribes,  Laundering $5.5 Million to Colombia | United States Department of Justice",
+      "published_date": "Fri, 30 Jan 2026 15:10:10 GMT",
+      "categories": [
+        "financial_crime"
+      ]
+    },
+    {
+      "id": "S41",
+      "url": "https://www.justice.gov/archives/opa/pr/td-bank-pleads-guilty-bank-secrecy-act-and-money-laundering-conspiracy-violations-18b",
+      "title": "Department of Justice | Homepage | United States Department of Justice",
+      "published_date": "Thu, 10 Oct 2024 00:00:00 GMT",
+      "categories": [
+        "financial_crime"
+      ]
+    },
+    {
+      "id": "S42",
+      "url": "https://ofac.treasury.gov/recent-actions/20211223_33",
+      "title": "Settlement Agreement between the U.S. Department of the Treasury\u2019s Office of Foreign Assets Control and TD Bank, N.A. | Office of Foreign Assets Control",
+      "published_date": "Thu, 23 Dec 2021 00:00:00 GMT",
+      "categories": [
+        "sanctions"
+      ]
+    },
+    {
+      "id": "S43",
+      "url": "https://ofac.treasury.gov/media/917121/download?inline=",
+      "title": "December 23, 2021 OFAC Settles with TD Bank, N.A. for ...",
+      "published_date": "Thu, 23 Dec 2021 00:00:00 GMT",
+      "categories": [
+        "sanctions"
+      ]
+    },
+    {
+      "id": "S44",
+      "url": "https://www.fdic.gov/financial-reports/2024-annual-report-appendices.pdf",
+      "title": "2024 FDIC Annual Report Appendices",
+      "published_date": "Fri, 23 May 2025 11:31:44 GMT",
+      "categories": [
+        "sanctions"
+      ]
+    },
+    {
+      "id": "S45",
+      "url": "https://home.treasury.gov/news/press-releases/jy2640",
+      "title": "Remarks by Deputy Secretary of the Treasury Wally Adeyemo at Press Conference at the Department of Justice | U.S. Department of the Treasury",
+      "published_date": "Thu, 10 Oct 2024 17:16:22 GMT",
+      "categories": [
+        "sanctions"
+      ]
+    },
+    {
+      "id": "S46",
+      "url": "https://www.td.com/us/en/commercial-banking/prevent-cyber-fraud",
+      "title": "Preventing cyber fraud starts with business owners | TD Bank Middle Market",
+      "published_date": "Wed, 12 Feb 2025 00:00:00 GMT",
+      "categories": [
+        "data_breach"
+      ]
+    },
+    {
+      "id": "S47",
+      "url": "https://abc7ny.com/post/online-banking-zelle-app-protect-from-ransomware-bank/11748085",
+      "title": "How to protect yourself from ransomware: Thieves steal thousands from couple's TD Bank accounts with Zelle app, online banking - ABC7 New York",
+      "published_date": "Thu, 14 Apr 2022 18:37:00 GMT",
+      "categories": [
+        "data_breach"
+      ]
+    },
+    {
+      "id": "S48",
+      "url": "https://www.upguard.com/news/td-data-breach-2026-06-17",
+      "title": "TD data breach confirmed \u2013 names and social security numbers compromised | UpGuard",
+      "published_date": "Wed, 17 Jun 2026 00:00:00 GMT",
+      "categories": [
+        "data_breach"
+      ]
+    },
+    {
+      "id": "S49",
+      "url": "https://securityblueprints.io/data-breaches/ncb-management-services-data-breach-february-2023",
+      "title": "NCB Management Services Data Breach February 2023 | Security Blueprints",
+      "published_date": "Wed, 01 Feb 2023 00:00:00 GMT",
+      "categories": [
+        "data_breach"
+      ]
+    },
+    {
+      "id": "S50",
+      "url": "https://www.dexpose.io/bank-data-breaches",
+      "title": "Bank Data Breaches 2026 | How to Protect Yourself",
+      "published_date": "Wed, 29 Apr 2026 14:00:00 GMT",
+      "categories": [
+        "data_breach"
+      ]
+    },
+    {
+      "id": "S51",
+      "url": "https://dailyhodl.com/2026/07/10/td-bank-data-breach-exposes-customer-social-security-numbers-and-account-details-in-insider-incident",
+      "title": "TD Bank Data Breach Exposes Customer Social Security Numbers and Account Details in Insider Incident - The Daily Hodl",
+      "published_date": "Fri, 10 Jul 2026 16:55:23 GMT",
+      "categories": [
+        "data_breach"
+      ]
+    },
+    {
+      "id": "S52",
+      "url": "https://www.teiss.co.uk/news/td-bank-discloses-new-data-breach-affecting-massachusetts-customers-18209",
+      "title": "teiss - News - TD Bank discloses new data breach affecting Massachusetts customers",
+      "published_date": "Fri, 25 Sep 2026 04:08:00 GMT",
+      "categories": [
+        "data_breach"
+      ]
+    },
+    {
+      "id": "S53",
+      "url": "https://www.claimdepot.com/data-breach/td-bank-2026",
+      "title": "TD Bank Data Breach Exposes Personal and Financial Information",
+      "published_date": "Mon, 21 Sep 2026 00:00:00 GMT",
+      "categories": [
+        "data_breach"
+      ]
+    },
+    {
+      "id": "S54",
+      "url": "https://www.td.com/ca/en/personal-banking/advice/borrowing/how-to-manage-debt",
+      "title": "Debt Consolidation | TD Canada Trust",
+      "published_date": "Sat, 15 Oct 2022 00:00:00 GMT",
+      "categories": [
+        "financial_distress"
+      ]
+    },
+    {
+      "id": "S55",
+      "url": "https://www.corporatecomplianceinsights.com/how-earn-fine-td-bank-masterclass-compliance-failures",
+      "title": "How to Earn a $3B Fine: TD Bank's Masterclass in Compliance Failures | Corporate Compliance Insights",
+      "published_date": "Mon, 11 Nov 2024 13:03:40 GMT",
+      "categories": [
+        "leadership"
+      ]
+    },
+    {
+      "id": "S56",
+      "url": "https://www.warren.senate.gov/wp-content/uploads/media/doc/warren_letter_to_doj_re_td_bank.pdf",
+      "title": "Warren Letter to DOJ re: TD Bank",
+      "published_date": "Wed, 30 Oct 2024 00:00:00 GMT",
+      "categories": [
+        "leadership"
+      ]
+    },
+    {
+      "id": "S57",
+      "url": "https://www.td.com/content/dam/tdcom/canada/about-td/pdf/2024-code-conduct-ethics-en.pdf",
+      "title": "2024-code-conduct-ethics-en.pdf",
+      "published_date": "Thu, 01 Feb 2024 20:06:43 GMT",
+      "categories": [
+        "leadership"
+      ]
+    }
+  ]
+}
